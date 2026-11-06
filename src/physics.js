@@ -1,6 +1,7 @@
 import * as pl from "planck";
 import {WIDTH,HEIGHT,BALL_RADIUS} from "./tables.js";
 import {newQuestLedger,recordQuestEvent} from "./quests.js";
+import {LOWER_RAILS,UPPER_RAILS,SLINGSHOTS,drainZoneAt,deadCornerAt} from "./geometry.js";
 
 const V = pl.Vec2;
 const STEP = 1/120;
@@ -10,29 +11,17 @@ const clamp = (v,min,max) => Math.max(min,Math.min(max,v));
 function edge(world,x1,y1,x2,y2) {
   if (Math.hypot(x2-x1,y2-y1) < 0.06) return;
   const b = world.createBody();
-  b.createFixture(new pl.Edge(V(x1,y1),V(x2,y2)),{friction:0.28,restitution:0.73});
+  b.createFixture(new pl.Edge(V(x1,y1),V(x2,y2)),{friction:0.18,restitution:0.58});
 }
 function rails(world,layer) {
-  if (layer === 0) {
-    edge(world,0.37,0.65,WIDTH-0.37,0.65);
-    edge(world,0.37,0.65,0.37,16.25);
-    edge(world,10.13,0.65,10.13,16.93);
-    edge(world,0.37,16.25,2.6,15.5);
-    edge(world,10.13,16.5,7.9,15.5);
-    edge(world,9.25,3.12,9.25,16.80);
-    edge(world,9.25,16.86,10.13,16.86);
-    edge(world,1.15,13.13,3.23,14.22);
-    edge(world,9.28,13.13,7.25,14.22);
-    edge(world,0.9,3.8,1.7,2.15);
-    edge(world,8.7,2.15,9.22,3.2);
-  } else {
-    edge(world,2.0,2.05,8.6,2.05);
-    edge(world,2.0,2.05,2.0,10.0);
-    edge(world,8.6,2.05,8.6,10.0);
-    edge(world,2.0,10.0,8.6,10.0);
-    edge(world,2.15,7.1,3.05,8.7);
-    edge(world,7.6,7.45,8.2,8.95);
-  }
+  for(const coords of layer===0?LOWER_RAILS:UPPER_RAILS)edge(world,...coords);
+}
+function addSlingshot(world,part) {
+  const b=world.createBody({position:V(part.x,part.y)});
+  b.createFixture(new pl.Polygon(part.vertices.map(([x,y])=>V(x,y))),{
+    friction:0.2,restitution:0.92,
+    userData:{kind:"sling",id:part.id,x:part.x,y:part.y,side:part.side}
+  });
 }
 function addFlipper(world,side) {
   const left=side==="left";
@@ -62,11 +51,12 @@ function makeScene(layer,table,onHit) {
   const world=new pl.World({gravity:V(0,5.1)});
   rails(world,layer);
   for (const part of table.objects.filter(o=>o.layer===layer)) addPart(world,part);
+  if(layer===0)for(const sling of SLINGSHOTS)addSlingshot(world,sling);
   const flippers=layer===0?[addFlipper(world,"left"),addFlipper(world,"right")]:[];
   world.on("begin-contact",contact=>{
     for (const fixture of [contact.getFixtureA(),contact.getFixtureB()]) {
       const data=fixture.getUserData();
-      if (data && (data.kind==="bumper" || data.kind==="target")) onHit(layer,data);
+      if (data && (data.kind==="bumper" || data.kind==="target" || data.kind==="sling")) onHit(layer,data);
     }
   });
   return {world,flippers};
@@ -97,6 +87,7 @@ export class PinballGame {
     this.tiltMeter=0;this.tilted=false;
     this.accumulator=0;this.elapsed=0;this.lastRamp=-10;this.lastNudge=-10;
     this.upperTime=0;this.lastHit=new Map();this.ledger=newQuestLedger(this.table.quests);
+    this.stuckSeconds=0;this.misfireSeconds=0;this.rescueCount=0;this.lastRescue=null;
     this.ball=addBall(this.scenes[0].world,9.7,15.85);
     this.pendingHits.length=0;
   }
@@ -179,12 +170,41 @@ export class PinballGame {
         return;
       }
     }
-    p=this.ball.getPosition();
-    if(this.layer===0 && (p.y>17.1 || p.x<0 || p.x>WIDTH+0.8)) this.drain();
+    this.watchBall();
+    if(this.status!=="playing")return;
     // A recovery chute prevents user-built upper tables from trapping the ball forever.
     if(this.layer===1 && this.upperTime>18) {
       this.transfer({toLayer:0,toX:7.6,toY:11.0});
       this.onEvent("UPPER DECK RECOVERY CHUTE");
+    }
+  }
+  watchBall() {
+    if(!this.ball)return;
+    const p=this.ball.getPosition(),v=this.ball.getLinearVelocity(),speed=v.length();
+    if(this.layer===0) {
+      const drain=drainZoneAt(p.x,p.y);
+      if(drain){this.lastRescue="DRAIN · "+drain;this.drain();return;}
+      if(p.x>9.25&&p.y>16.3&&speed<.6)this.misfireSeconds+=STEP;
+      else this.misfireSeconds=0;
+      if(this.misfireSeconds>1.0) {
+        this.scenes[0].world.destroyBody(this.ball);
+        this.ball=addBall(this.scenes[0].world,9.7,15.85);
+        this.status="ready";this.charge=0;this.charging=false;
+        this.stuckSeconds=0;this.misfireSeconds=0;
+        this.onEvent("SHOOTER MISFIRE · RELOAD PLUNGER");
+        return;
+      }
+    }
+    if(speed<.19)this.stuckSeconds+=STEP;
+    else this.stuckSeconds=0;
+    if(this.layer===0&&deadCornerAt(p.x,p.y)&&this.stuckSeconds>1.3){
+      this.lastRescue="DEAD CORNER · CONTROLLED DRAIN";
+      this.drain();return;
+    }
+    if(this.layer===1&&this.stuckSeconds>5&&this.rescueCount<2){
+      this.ball.applyLinearImpulse(V(p.x<5.25?.35:-.35,.8),this.ball.getWorldCenter(),true);
+      this.lastRescue="UPPER BALL RESCUE";this.rescueCount++;this.stuckSeconds=0;
+      this.onEvent("UPPER BALL RESCUE");
     }
   }
   processHits() {
@@ -194,16 +214,20 @@ export class PinballGame {
       const key=hit.layer+"-"+hit.id;
       if(this.elapsed-(this.lastHit.get(key)??-10)<0.16)continue;
       this.lastHit.set(key,this.elapsed);
-      this.score+=hit.kind==="bumper"?100:500;
-      if(hit.kind==="bumper") {
+      this.score+=hit.kind==="bumper"?100:hit.kind==="sling"?75:500;
+      if(hit.kind==="bumper"||hit.kind==="sling") {
         const p=this.ball?.getPosition();
         if(p) {
-          const dx=p.x-hit.x,dy=p.y-hit.y;
-          const dist=Math.max(0.1,Math.hypot(dx,dy));
-          this.ball.applyLinearImpulse(V(dx/dist*0.31,dy/dist*0.31),this.ball.getWorldCenter(),true);
+          const dx=p.x-hit.x,dy=p.y-hit.y,dist=Math.max(.12,Math.hypot(dx,dy));
+          if(hit.kind==="bumper") {
+            this.ball.applyLinearImpulse(V(dx/dist*1.0,dy/dist*1.0),this.ball.getWorldCenter(),true);
+          }else {
+            this.ball.applyLinearImpulse(V(hit.side==="left"?.28:-.28,-1.10),this.ball.getWorldCenter(),true);
+            this.onEvent("SLINGSHOT · +75");
+          }
         }
       }
-      this.advanceQuest(hit.kind==="bumper"?"bumperHits":"targetHits");
+      if(hit.kind!=="sling")this.advanceQuest(hit.kind==="bumper"?"bumperHits":"targetHits");
     }
   }
   advanceQuest(kind) {
@@ -218,7 +242,7 @@ export class PinballGame {
     this.layer=ramp.toLayer;
     this.ball=addBall(this.scenes[this.layer].world,ramp.toX,ramp.toY);
     this.ball.setLinearVelocity(this.layer===1?V(1.5,2.2):V(v.x*0.6,Math.max(2.5,v.y)));
-    this.lastRamp=this.elapsed;
+    this.lastRamp=this.elapsed;this.stuckSeconds=0;this.misfireSeconds=0;
     if(this.layer===1) {
       if(!this.tilted){
         this.score+=1200;
@@ -232,6 +256,7 @@ export class PinballGame {
     this.ball=null;
     this.balls--;
     this.tiltMeter=0;this.tilted=false;this.charging=false;this.charge=0;
+    this.stuckSeconds=0;this.misfireSeconds=0;this.rescueCount=0;
     if(this.balls===0) {
       this.status="gameover";this.onEvent("GAME OVER · FINAL SCORE "+this.score.toLocaleString());
     } else {

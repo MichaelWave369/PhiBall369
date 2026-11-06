@@ -9,9 +9,7 @@ export const LOWER_RAILS=[
   [9.25,16.86,10.13,16.86],
   [.9,3.8,1.7,2.15],
   [8.7,2.15,9.22,3.2],
-  // Sloped return guides point toward the flippers, without trapping balls.
-  [1.15,13.13,3.23,14.22],
-  [9.28,13.13,7.25,14.22]
+  // Slingshots carry the return-guide collisions instead of overlapping rails.
 ];
 export const UPPER_RAILS=[
   [2,2.05,8.6,2.05],[2,2.05,2,10],
