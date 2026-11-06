@@ -1,9 +1,15 @@
 import {WIDTH,HEIGHT,BALL_RADIUS} from "./tables.js";
 import {LOWER_RAILS,UPPER_RAILS,SLINGSHOTS,DRAIN_ZONES} from "./geometry.js";
 import {drawSprite} from "./sprites.js";
+import {makeRampTrack,DECK_Z} from "./rampGeometry.js";
 
 const SCALE=50;
 const PI=Math.PI;
+const cachedTracks=new WeakMap();
+function trackFor(part){
+  if(!cachedTracks.has(part))cachedTracks.set(part,makeRampTrack(part));
+  return cachedTracks.get(part);
+}
 function line(ctx,x1,y1,x2,y2,color="#7f9eb6",size=.1){
   ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
   ctx.lineCap="round";ctx.strokeStyle=color;ctx.lineWidth=size;ctx.stroke();
@@ -85,6 +91,60 @@ function bounceFlash(game,layer,id){
   if(t===undefined)return 0;
   return Math.max(0,1-(game.elapsed-t)/.25);
 }
+function drawRaisedRamp(ctx,part,table){
+  const track=trackFor(part),nodes=track.nodes;
+  const left=[],right=[];
+  for(let i=0;i<nodes.length;i++){
+    const p=nodes[i],prev=nodes[Math.max(0,i-1)],
+      next=nodes[Math.min(nodes.length-1,i+1)];
+    const dx=next.x-prev.x,dy=next.y-prev.y;
+    const len=Math.max(.001,Math.hypot(dx,dy));
+    const nx=-dy/len,ny=dx/len;
+    const half=.27;
+    left.push({x:p.x+nx*half,y:p.y+ny*half,z:p.z});
+    right.push({x:p.x-nx*half,y:p.y-ny*half,z:p.z});
+  }
+  // Vertical supports make elevation physically legible in the top-down view.
+  ctx.save();
+  for(const i of [10,30,50,70]){
+    const p=nodes[i];
+    if(p.z<.2)continue;
+    line(ctx,p.x,p.y,p.x,p.y+p.z*.20,"#092035",.20);
+    line(ctx,p.x-.035,p.y,p.x-.035,p.y+p.z*.20,"#b9e4f8",.035);
+    circle(ctx,p.x,p.y,.13,"#102337","#91a9c4",.035);
+  }
+  // Cast a soft displacement shadow. The actual rails stay directly above
+  // their X/Y collision centerline, so overhead art remains accurate.
+  ctx.beginPath();
+  nodes.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y+p.z*.20):ctx.lineTo(p.x,p.y+p.z*.20));
+  ctx.strokeStyle="#000a1f80";ctx.lineWidth=.72;ctx.stroke();
+  ctx.beginPath();
+  left.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i].x,right[i].y);
+  ctx.closePath();
+  ctx.fillStyle="#0c2945b5";ctx.fill();
+  ctx.strokeStyle=table.accent+"55";ctx.lineWidth=.045;ctx.stroke();
+  for(const rail of [left,right]){
+    ctx.beginPath();
+    rail.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.strokeStyle="#08192c";ctx.lineWidth=.14;ctx.stroke();
+    ctx.strokeStyle="#b8ddef";ctx.lineWidth=.08;ctx.stroke();
+    ctx.strokeStyle="#f3ffff";ctx.lineWidth=.018;ctx.stroke();
+  }
+  ctx.beginPath();
+  nodes.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.setLineDash([.10,.16]);ctx.strokeStyle=table.accent+"bb";
+  ctx.lineWidth=.035;ctx.stroke();ctx.setLineDash([]);
+  const r=part.r;
+  circle(ctx,part.x,part.y,r+.10,table.accent+"2b");
+  if(!drawSprite(ctx,"ramp",part.x-r,part.y-r,r*2,r*2))
+    circle(ctx,part.x,part.y,r,"#264b65",table.accent,.07);
+  ctx.fillStyle="#ffffff";ctx.textAlign="center";ctx.font="bold .19px monospace";
+  ctx.fillText(part.toLayer===1?"UP":"DN",part.x,part.y+r*.70);
+  const end=nodes[nodes.length-1];
+  circle(ctx,end.x,end.y,.16,table.accent,"#e5fcff",.035);
+  ctx.restore();
+}
 function pieces(ctx,table,layer,game,opacity=1){
   ctx.save();ctx.globalAlpha=opacity;
   if(layer===1)upperDeck(ctx);
@@ -104,17 +164,8 @@ function pieces(ctx,table,layer,game,opacity=1){
       if(!drawSprite(ctx,"target",part.x-radius,part.y-radius,radius*2,radius*2))
         circle(ctx,part.x,part.y,part.r,"#d65173","#fff",.05);
     } else if(part.type==="ramp"){
-      ctx.save();
-      ctx.setLineDash([.12,.13]);
-      line(ctx,part.x,part.y,part.toX,part.toY,table.accent+"88",.08);
-      ctx.setLineDash([]);
-      circle(ctx,part.x,part.y,part.r+.19,table.accent+"28");
-      if(!drawSprite(ctx,"ramp",part.x-part.r,part.y-part.r,part.r*2,part.r*2))
-        circle(ctx,part.x,part.y,part.r,"#264b65",table.accent,.07);
-      ctx.fillStyle="#fff";ctx.font="bold .19px monospace";
-      ctx.textAlign="center";
-      ctx.fillText(part.toLayer===1?"UP":"DN",part.x,part.y+part.r*.70);
-      ctx.restore();
+      drawRaisedRamp(ctx,part,table);
+
     }
   }
   ctx.restore();
@@ -158,17 +209,26 @@ function shooter(ctx,game){
   }
 }
 function ball(ctx,game){
-  if(!game.ball)return;
-  const p=game.ball.getPosition();
-  const shadow=ctx.createRadialGradient(p.x+.055,p.y+.12,.02,p.x+.055,p.y+.12,.37);
+  const moving=game.rampMotion;
+  if(!game.ball&&!moving)return;
+  const p=moving?moving.point:game.ball.getPosition();
+  const z=moving?p.z:DECK_Z[game.layer];
+  // Top-down ball center always matches actual solver XY. Height is conveyed
+  // by the displacement and spread of the shadow, not a false sprite offset.
+  const shadowY=p.y+.15+z*.16;
+  const shadow=ctx.createRadialGradient(p.x+.055,shadowY,.02,p.x+.055,shadowY,.37+z*.10);
   shadow.addColorStop(0,"#00070fb9");shadow.addColorStop(1,"#00070f00");
-  circle(ctx,p.x+.055,p.y+.12,.37,shadow);
+  circle(ctx,p.x+.055,shadowY,.37+z*.10,shadow);
+  if(moving) {
+    circle(ctx,p.x,p.y,.31,"#78f2ff28");
+  }
   if(!drawSprite(ctx,"ball",p.x-.275,p.y-.275,.55,.55)){
     const g=ctx.createRadialGradient(p.x-.085,p.y-.085,.02,p.x,p.y,BALL_RADIUS);
     g.addColorStop(0,"#fff");g.addColorStop(.5,"#aac8db");g.addColorStop(1,"#162a40");
     circle(ctx,p.x,p.y,BALL_RADIUS,g,"#eafaff",.025);
   }
 }
+
 function diagnostic(ctx,game){
   ctx.save();
   for(const zone of DRAIN_ZONES){
@@ -183,7 +243,12 @@ function diagnostic(ctx,game){
     });
     ctx.closePath();ctx.lineWidth=.035;ctx.strokeStyle="#edff91";ctx.stroke();
   }
-  if(game.ball){
+  if(game.rampMotion){
+    const m=game.rampMotion,p=m.point;
+    ctx.fillStyle="#fff";ctx.font="bold .22px monospace";ctx.textAlign="left";
+    ctx.fillText("RAMP X "+p.x.toFixed(2)+" Y "+p.y.toFixed(2)+" Z "+p.z.toFixed(2),.6,16.83);
+    ctx.fillText("TRACK "+Math.round(m.distance/m.track.totalLength*100)+"%  SPEED "+m.speed.toFixed(2),.6,17.15);
+  }else if(game.ball){
     const p=game.ball.getPosition(),v=game.ball.getLinearVelocity();
     line(ctx,p.x,p.y,p.x+v.x*.14,p.y+v.y*.14,"#fff17e",.055);
     ctx.fillStyle="#fff";ctx.font="bold .23px monospace";ctx.textAlign="left";

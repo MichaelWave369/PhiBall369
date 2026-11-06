@@ -30,7 +30,8 @@ export function normalizeTable(raw) {
       objects.push({...common,
         x:finite(part.x,2,0.6,WIDTH-0.6),y:finite(part.y,7,1,HEIGHT-1),
         toX:finite(part.toX,5,0.6,WIDTH-0.6),toY:finite(part.toY,6,1,HEIGHT-1),
-        toLayer,r:finite(part.r,0.6,0.35,1)});
+        toLayer,r:finite(part.r,0.6,0.35,1),
+        curve:finite(part.curve,0.4,-1.5,1.5)});
     } else {
       objects.push({...common,
         x:finite(part.x,5,0.6,WIDTH-0.6),y:finite(part.y,7,1,HEIGHT-1),
