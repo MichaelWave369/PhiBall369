@@ -2,6 +2,10 @@
 
 **Browser-first React pinball physics engine and two-level table workshop.**
 
+### Mission Challenges: timers, target penalties, real rewards
+
+The Quest Workshop can now turn ordered secrets into timed pinball challenges. Set a countdown, decide whether incorrect targets restart the sequence, and award custom points or one extra ball. BTM and ARCLight ship with distinct challenge rules. The existing safe JSON import/export preserves all new metadata. See [Mission Challenges](docs/MISSION_CHALLENGES.md).
+
 ### Secret Target Missions: ordered multi-stage quests
 
 Create missions with up to six stages, each requiring hits on a specific physical bumper, target or upward ramp. Current-stage hardware gets highlighted, and the next stage unlocks only after the previous one succeeds. System Breach and ARCLight each ship with a secret sequence to discover. The visual workshop, local saves and safe JSON export/import support these quests without scripting. See [Secret Target Missions](docs/SECRET_MISSIONS.md).

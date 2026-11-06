@@ -28,6 +28,17 @@ function normalizeStages(raw,objects){
     });
   return stages.length?stages:null;
 }
+function normalizeChallenge(raw){
+  if(!raw||typeof raw!=="object"||Array.isArray(raw))return null;
+  const seconds=Number.isFinite(raw.seconds)&&raw.seconds>0?
+    Math.round(finite(raw.seconds,30,5,120)):0;
+  return {
+    seconds,
+    wrongHit:raw.wrongHit==="reset"?"reset":"ignore",
+    points:Math.round(finite(raw.points,2000,0,20000)),
+    extraBall:raw.extraBall===true
+  };
+}
 function normalizeMode(raw){
   if(!raw||typeof raw!=="object"||Array.isArray(raw))return null;
   if(!modeKinds.has(raw.triggerKind)||!modeKinds.has(raw.bonusKind))return null;
@@ -90,10 +101,12 @@ export function normalizeTable(raw) {
       }
       missionIds.add(id);
       const stages=normalizeStages(q.stages,objects);
+      const challenge=stages?normalizeChallenge(q.challenge):null;
       return {
         id,label:safeText(q.label,"Complete quest "+(i+1),95),
         kind:q.kind,goal:Math.round(finite(q.goal,3,1,99)),
-        ...(stages?{stages}:{})
+        ...(stages?{stages}:{}),
+        ...(challenge?{challenge}:{})
       };
     });
   return {

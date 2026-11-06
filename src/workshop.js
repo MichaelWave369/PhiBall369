@@ -52,7 +52,7 @@ export function toggleQuestSequence(quests,id,enabled){
   return quests.map(q=>{
     if(q.id!==id)return q;
     if(!enabled){
-      const {stages,...simple}=q;
+      const {stages,challenge,...simple}=q;
       return simple;
     }
     if(q.stages?.length)return q;
@@ -60,6 +60,28 @@ export function toggleQuestSequence(quests,id,enabled){
       {kind:q.kind,goal:1,partId:null},
       {kind:q.kind,goal:1,partId:null}
     ]};
+  });
+}
+export function defaultChallenge(){
+  return {seconds:30,wrongHit:"ignore",points:2000,extraBall:false};
+}
+export function toggleQuestChallenge(quests,id,enabled){
+  return quests.map(q=>{
+    if(q.id!==id||!q.stages?.length)return q;
+    if(!enabled){
+      const {challenge,...simple}=q;
+      return simple;
+    }
+    return {...q,challenge:{...defaultChallenge(),...(q.challenge??{})}};
+  });
+}
+export function editQuestChallenge(quests,id,field,value){
+  if(!["seconds","wrongHit","points","extraBall"].includes(field))return quests;
+  return quests.map(q=>{
+    if(q.id!==id||!q.stages?.length||!q.challenge)return q;
+    const parsed=field==="extraBall"?Boolean(value):
+      field==="wrongHit"?value:Number(value);
+    return {...q,challenge:{...q.challenge,[field]:parsed}};
   });
 }
 export function addQuestStage(quests,id){

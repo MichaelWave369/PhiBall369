@@ -1,6 +1,6 @@
 import * as pl from "planck";
 import {WIDTH,HEIGHT,BALL_RADIUS} from "./tables.js";
-import {newQuestLedger,recordQuestEvent} from "./quests.js";
+import {newQuestLedger,recordQuestEvent,tickQuestTimers} from "./quests.js";
 import {LOWER_RAILS,UPPER_RAILS,SLINGSHOTS,drainZoneAt,deadCornerAt} from "./geometry.js";
 import {makeRampTrack,sampleRamp} from "./rampGeometry.js";
 import {makeModeState,onModeEvent,expireMode,endActiveMode,modeActive} from "./modes.js";
@@ -156,6 +156,10 @@ export class PinballGame {
   }
   step(keys) {
     this.elapsed+=STEP;
+    for(const event of tickQuestTimers(this.ledger,this.elapsed)){
+      this.fx("tilt",{reason:"missionTimeout",questId:event.questId});
+      this.onEvent("MISSION TIMEOUT · "+event.label.toUpperCase()+" · RETRY STAGE ONE");
+    }
     if(expireMode(this.modeState,this.elapsed)){
       this.fx("modeEnd");
       this.onEvent("SPECIAL MODE COMPLETE · RECHARGE THE MACHINE");
@@ -333,16 +337,25 @@ export class PinballGame {
       this.fx("mode");
       this.onEvent("MODE ACTIVE: "+this.modeState.config.label);
     }
-    const completed=recordQuestEvent(this.ledger,kind,partId);
+    const completed=recordQuestEvent(this.ledger,kind,partId,this.elapsed);
     for(const stage of this.ledger.stageEvents){
-      this.fx("mode");
-      this.onEvent("SECRET STAGE "+stage.completedStage+"/"+stage.stageCount+
-        " COMPLETE · NEXT OBJECTIVE UNLOCKED");
+      if(stage.type==="wrongHit"){
+        this.fx("nudge",{reason:"wrongTarget",questId:stage.questId});
+        this.onEvent("WRONG TARGET · "+stage.label.toUpperCase()+" RESET");
+      }else{
+        this.fx("mode");
+        this.onEvent("SECRET STAGE "+stage.completedStage+"/"+stage.stageCount+
+          " COMPLETE · NEXT OBJECTIVE UNLOCKED");
+      }
     }
     for(const quest of completed) {
-      this.score+=2000;
-      this.fx("quest");
-      this.onEvent("QUEST COMPLETE: "+quest.label.toUpperCase());
+      const points=quest.challenge?.points??2000;
+      this.score+=points;
+      const ballAward=quest.challenge?.extraBall===true&&this.balls<9;
+      if(ballAward)this.balls++;
+      this.fx("quest",{points,extraBall:ballAward});
+      this.onEvent("QUEST COMPLETE: "+quest.label.toUpperCase()+
+        " · +"+points.toLocaleString()+(ballAward?" · EXTRA BALL!":""));
     }
   }
   // Legacy instant transfer is retained only for recovery chutes and

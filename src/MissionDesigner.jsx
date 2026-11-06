@@ -1,7 +1,8 @@
 import {useEffect,useState} from "react";
 import {EVENT_OPTIONS,MAX_QUESTS,addQuest,removeQuest,moveQuest,updateQuest,
   defaultMode,updateMode,missionDraft,toggleQuestSequence,addQuestStage,
-  editQuestStage,removeQuestStage,moveQuestStage} from "./workshop.js";
+  editQuestStage,removeQuestStage,moveQuestStage,
+  toggleQuestChallenge,editQuestChallenge} from "./workshop.js";
 import {MAX_STAGES} from "./quests.js";
 
 const typeName=kind=>EVENT_OPTIONS.find(item=>item.value===kind)?.label??kind;
@@ -117,6 +118,42 @@ export default function MissionDesigner({table,onSave,onPlay}){
           onClick={()=>changeStages(addQuestStage,quest.id)}>
           + ADD STAGE ({quest.stages.length}/{MAX_STAGES})
         </button>
+        <label className="mode-toggle challenge-toggle">
+          <input type="checkbox" checked={Boolean(quest.challenge)}
+            onChange={e=>changeStages(toggleQuestChallenge,quest.id,e.target.checked)}/>
+          ENABLE MISSION CHALLENGE RULES
+        </label>
+        {quest.challenge&&<div className="challenge-editor">
+          <div className="section-title">CHALLENGE RULES <span className="line"></span></div>
+          <label htmlFor={"challenge-seconds-"+quest.id}>TIME LIMIT (0 = UNLIMITED)</label>
+          <input id={"challenge-seconds-"+quest.id} className="editor-input"
+            type="number" min="0" max="120" step="1" value={quest.challenge.seconds}
+            onChange={e=>changeStages(editQuestChallenge,quest.id,"seconds",e.target.value)}/>
+          <label htmlFor={"challenge-wrong-"+quest.id}>WRONG TARGET</label>
+          <select id={"challenge-wrong-"+quest.id} value={quest.challenge.wrongHit}
+            onChange={e=>changeStages(editQuestChallenge,quest.id,"wrongHit",e.target.value)}>
+            <option value="ignore">Ignore incorrect part</option>
+            <option value="reset">Restart at stage one</option>
+          </select>
+          <label htmlFor={"challenge-points-"+quest.id}>COMPLETION BONUS POINTS</label>
+          <input id={"challenge-points-"+quest.id} className="editor-input"
+            type="number" min="0" max="20000" step="100"
+            value={quest.challenge.points}
+            onChange={e=>changeStages(editQuestChallenge,quest.id,"points",e.target.value)}/>
+          <label className="mode-toggle challenge-toggle">
+            <input type="checkbox" checked={quest.challenge.extraBall===true}
+              onChange={e=>changeStages(editQuestChallenge,quest.id,"extraBall",e.target.checked)}/>
+            AWARD EXTRA BALL ON COMPLETION
+          </label>
+          <p className="mode-rule-summary"><strong>CHALLENGE PREVIEW</strong>
+            {quest.challenge.seconds>0?
+              "Complete the entire sequence within "+quest.challenge.seconds+" seconds, beginning with the first valid hit. ":
+              "Complete the sequence without a timer. "}
+            Wrong targets {quest.challenge.wrongHit==="reset"?"restart the sequence. ":"are ignored. "}
+            Finishing awards {quest.challenge.points} points
+            {quest.challenge.extraBall?" and one extra ball (up to nine total).":"."}
+          </p>
+        </div>}
       </div>:<>
         <label htmlFor={"quest-kind-"+quest.id}>COUNT THIS EVENT</label>
         <EventType id={"quest-kind-"+quest.id} value={quest.kind}
