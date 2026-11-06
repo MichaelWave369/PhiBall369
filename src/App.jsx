@@ -96,6 +96,8 @@ export default function App() {
   const [hud,setHud]=useState(()=>snapshot(game));
   const [editor,setEditor]=useState(false);
   const editorRef=useRef(false);
+  const [debug,setDebug]=useState(false);
+  const debugRef=useRef(false);
   const [editLayer,setEditLayer]=useState(0);
   const layerRef=useRef(0);
   const [tool,setTool]=useState("bumper");
@@ -248,7 +250,7 @@ export default function App() {
       const dt=(now-last)/1000;last=now;
       if(!editorRef.current)gameRef.current.stepFrame(dt,controls.current);
       drawPinball(context,gameRef.current,tableRef.current,
-        editorRef.current,layerRef.current,pendingRef.current);
+        editorRef.current,layerRef.current,pendingRef.current,debugRef.current);
       if(now-lastHud>125){setHud(snapshot(gameRef.current));lastHud=now;}
       request=requestAnimationFrame(frame);
     };
@@ -268,7 +270,7 @@ export default function App() {
           <small>THE PHYSICS ARCADE</small></div>
       </div>
       <div className="header-right"><span className="live-dot"></span> LIVE REACT ARCADE
-        <span className="version">RUNG 02</span>
+        <span className="version">RUNG 04 · CHROME EDITION</span>
         <a href="https://github.com/MichaelWave369/PhiBall369" target="_blank" rel="noopener noreferrer">GITHUB</a>
       </div>
     </header>
@@ -328,11 +330,14 @@ export default function App() {
         </div>
         <div className="nudge-touch"><button disabled={editor||hud.status!=="playing"||hud.tilted}
           onClick={()=>{game.nudge();refresh();}}>NUDGE · TILT WARNING</button></div>
-        <p className="footer-note">FIXED-STEP PLANCK / BOX2D · CHARGEABLE PLUNGER · TILT RULES · TWO LAYERS</p>
+        <p className="footer-note">CHROME SPRITES · REAL SLING IMPULSES · TRAP WATCHDOG · TWO LAYERS</p>
       </section>
       <aside className="panel right-panel">
         <div className="section-title">THE WORKSHOP <span className="line"></span></div>
         <p className="muted">Build tables with parts that affect the actual physics simulation.</p>
+        <label className="debug-option"><input type="checkbox" checked={debug}
+          onChange={event=>{const active=event.target.checked;setDebug(active);debugRef.current=active;}}/>
+          SHOW PHYSICS DEBUG OVERLAY</label>
         <button className={"editor-toggle"+(editor?" active":"")} onClick={toggleEditor}>
           {editor?"PLAY THIS TABLE":"ENTER BUILD MODE"}</button>
         {editor&&<div className="builder">
@@ -376,7 +381,7 @@ export default function App() {
           <div><b>03</b><span>ARCLIGHT</span><small>STARSHIP RAMP RUN</small></div>
         </div>
         <div className="divider"></div>
-        <p className="field-footnote">Browser-first by design. Continuous 3D ramps, improved mechanical sound and calibrated spin are planned, not yet implemented.</p>
+        <p className="field-footnote">Original chrome sprites, physical sling kickers, collision-aligned rails and drain-zone watchdog enabled. Continuous 3D ramps and calibrated spin are future rungs.</p>
       </aside>
     </main>
   </>;
