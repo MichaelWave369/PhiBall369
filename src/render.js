@@ -41,15 +41,39 @@ function background(ctx,table,game){
   ctx.strokeStyle=table.accent;ctx.lineWidth=.038;
   ctx.beginPath();ctx.ellipse(5.2,7.8,3.2,2.45,.15,0,2*PI);ctx.stroke();
   ctx.beginPath();ctx.ellipse(5.2,7.8,2.6,1.85,.15,0,2*PI);ctx.stroke();
-  ctx.font="900 1.2px system-ui";ctx.fillStyle=table.accent;
-  ctx.textAlign="center";ctx.fillText("Φ BALL",5.2,9.0);
-  ctx.font="bold .28px monospace";ctx.fillText("THE PHYSICS ARCADE",5.2,9.5);
+  const branding={
+    lab:["Φ BALL","THE PHYSICS ARCADE"],
+    btm:["SYSTEM BREACH","NO GODS IN THE MACHINE"],
+    arclight:["ARCLIGHT 3333","STARSHIP DECKS · ACTIVE"],
+    custom:["CUSTOM TABLE","BUILT IN THE WORKSHOP"]
+  }[table.id]??["CUSTOM TABLE","BUILT IN THE WORKSHOP"];
+  ctx.font="900 .91px system-ui";ctx.fillStyle=table.accent;
+  ctx.textAlign="center";ctx.fillText(branding[0],5.2,9.0,7.5);
+  ctx.font="bold .25px monospace";ctx.fillText(branding[1],5.2,9.5,7.4);
   ctx.restore();
-  // Lit inserts, not collision surfaces.
+  // Gameplay-triggered lamp sequences sit on the playfield artwork only.
+  const cue=game.lastEffect;
+  const flash=cue?Math.max(0,1-(game.elapsed-cue.at)/.68):0;
   for(let i=0;i<12;i++){
     const x=1.2+i%6*1.55,y=i<6?11.45:12.12;
-    circle(ctx,x,y,.115,"#101c30","#a7c0d0",.028);
-    circle(ctx,x,y,.072,(i%3===0?"#ffbf69":table.accent)+"ba");
+    const cadence=(Math.sin(game.elapsed*4+i*.64)+1)*.5;
+    const selected=cue?.sequence===undefined?false:(i+cue.sequence)%4===0;
+    const lit=Math.max(.21,cadence*.55,selected?flash:0);
+    const color=(i%3===0?"#ffc57f":table.accent);
+    circle(ctx,x,y,.13,"#101c30","#99b4c8",.033);
+    if(lit>.65){
+      ctx.save();ctx.shadowColor=color;ctx.shadowBlur=8;
+      circle(ctx,x,y,.10,color);
+      ctx.restore();
+    }else circle(ctx,x,y,.07,color);
+    circle(ctx,x,y,.09,"#ffffff"+Math.round(Math.min(.5,lit*.5)*255).toString(16).padStart(2,"0"));
+  }
+  if(flash>0){
+    ctx.save();
+    ctx.globalAlpha=Math.min(.45,flash*.40);
+    ctx.strokeStyle=table.accent;ctx.lineWidth=.10;
+    ctx.strokeRect(.24,.3,10,16.85);
+    ctx.restore();
   }
   ctx.strokeStyle="#e6fbff66";ctx.lineWidth=.08;
   ctx.strokeRect(.20,.26,10.1,16.98);
