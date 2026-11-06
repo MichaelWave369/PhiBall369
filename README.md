@@ -2,6 +2,10 @@
 
 **Browser-first React pinball physics engine and two-level table workshop.**
 
+### Signature Machines: unique physics layouts and timed mission modes
+
+PhiBall Lab, System Breach and ARCLight 3333 now have independent real collision layouts, new original playfield markings and distinct timed special modes. Earn Quantum Combo, Security Breach or Reactor Overdrive through real hits and ramp ascents. React shows charging progress and active countdowns, and game events apply the bonus points. See [Signature Machines](docs/SIGNATURE_MACHINES.md).
+
 ### Sound + Light Rung: responsive arcade personality
 
 An opt-in Web Audio engine generates original synthesized flipper, bumper, slingshot, target, ramp, skill-shot, quest, tilt, and drain effects. Three per-table sound profiles and live-reactive playfield lighting add character without relying on copyrighted samples or requiring new physics. Audio begins disabled until **Enable Arcade Audio** is clicked. See [Sound + Light notes](docs/SOUND_AND_LIGHT.md).

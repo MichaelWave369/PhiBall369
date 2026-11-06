@@ -4,6 +4,7 @@ import {PRESETS,findPreset,WIDTH,HEIGHT,MAX_OBJECTS,copyTable} from "./tables.js
 import {normalizeTable} from "./validation.js";
 import {drawPinball} from "./render.js";
 import {ArcadeAudio,SOUND_THEMES} from "./audio.js";
+import {modeActive,modeRemaining} from "./modes.js";
 
 const STORAGE="phiball369-table-v1";
 const emptyControl={left:false,right:false};
@@ -32,6 +33,17 @@ function snapshot(game) {
     ramping:!!game.rampMotion,
     rampProgress:game.rampMotion?
       Math.round(100*game.rampMotion.distance/game.rampMotion.track.totalLength):0,
+    mode:game.modeState?{
+      label:game.modeState.config.label,
+      description:game.modeState.config.description,
+      threshold:game.modeState.config.threshold,
+      progress:game.modeState.progress,
+      multiplier:game.modeState.config.multiplier,
+      bonusKind:game.modeState.config.bonusKind,
+      active:modeActive(game.modeState,game.elapsed),
+      remaining:Math.ceil(modeRemaining(game.modeState,game.elapsed)),
+      activations:game.modeState.activations
+    }:null,
     quests:game.ledger.quests.map(q=>({
       ...q,count:Math.min(q.goal,game.ledger.counts[q.kind]||0),
       completed:game.ledger.completed.includes(q.id)
@@ -346,7 +358,7 @@ export default function App() {
           <small>THE PHYSICS ARCADE</small></div>
       </div>
       <div className="header-right"><span className="live-dot"></span> LIVE REACT ARCADE
-        <span className="version">RUNG 06 · SOUND + LIGHT</span>
+        <span className="version">RUNG 07 · SIGNATURE MACHINES</span>
         <a href="https://github.com/MichaelWave369/PhiBall369" target="_blank" rel="noopener noreferrer">GITHUB</a>
       </div>
     </header>
@@ -369,6 +381,17 @@ export default function App() {
           (editLayer===0?"EDIT LOWER · L1":"EDIT UPPER · L2"):
           (hud.ramping?"RAMP "+hud.rampProgress+"% · Z "+hud.height.toFixed(2):
             hud.layer===0?"LOWER · L1":"UPPER · L2")}</strong></div>
+        {hud.mode&&<div className={"signature-mode"+(hud.mode.active?" active":"")}>
+          <div className="mode-overline">SIGNATURE MODE {hud.mode.active?"· ACTIVE":"· CHARGING"}</div>
+          <strong>{hud.mode.label}</strong>
+          <p>{hud.mode.description}</p>
+          <div className="mode-gauge"><span style={{width:(hud.mode.active?100:
+            Math.round(100*hud.mode.progress/hud.mode.threshold))+"%"}} /></div>
+          <div className="mode-stats"><span>{hud.mode.active?
+            hud.mode.remaining+"s LEFT · ×"+hud.mode.multiplier+" BONUS":
+            hud.mode.progress+" / "+hud.mode.threshold+" TO ACTIVATE"}</span>
+            <span>{hud.mode.activations} RUNS</span></div>
+        </div>}
         <div className="section-title spaced">PLUNGER + TILT <span className="line"></span></div>
         <div className="gauge-label"><span>SPRING CHARGE</span><strong>{Math.round(hud.charge*100)}%</strong></div>
         <div className="gauge"><div className="gauge-fill" style={{width:(hud.charge*100)+"%"}} /></div>
@@ -409,7 +432,7 @@ export default function App() {
         </div>
         <div className="nudge-touch"><button disabled={editor||hud.status!=="playing"||hud.tilted}
           onClick={()=>{game.nudge();refresh();}}>NUDGE · TILT WARNING</button></div>
-        <p className="footer-note">CHROME SPRITES · CONTINUOUS-HEIGHT SPLINE RAMPS · TWO PLANCK DECKS</p>
+        <p className="footer-note">THREE ORIGINAL LAYOUTS · TIMED QUEST MODES · PHYSICS-DRIVEN PLAY</p>
       </section>
       <aside className="panel right-panel">
         <div className="section-title">ARCADE AUDIO <span className="line"></span></div>
@@ -489,7 +512,7 @@ export default function App() {
           <div><b>03</b><span>ARCLIGHT</span><small>STARSHIP RAMP RUN</small></div>
         </div>
         <div className="divider"></div>
-        <p className="field-footnote">Original opt-in procedural audio and reactive lamps added. Full 3D collision, calibrated spin and licensed music packs remain future work.</p>
+        <p className="field-footnote">Three independent physical layouts and timed signature scoring modes. Imported custom tables retain an optional validated mode configuration. Full free-body 3D collision remains future work.</p>
       </aside>
     </main>
   </>;

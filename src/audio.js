@@ -19,6 +19,9 @@ const VOICES=Object.freeze({
   skill:[["sine",660,660,.12,.14,0],["sine",880,880,.13,.21,.13]],
   drain:[["triangle",175,75,.16,.30,0]],
   nudge:[["sawtooth",110,65,.055,.09,0]],
+  mode:[["sine",440,660,.12,.14,0],["sine",660,990,.13,.18,.13]],
+  jackpot:[["triangle",790,1240,.11,.13,0],["sine",930,1550,.08,.14,.08]],
+  modeEnd:[["triangle",520,290,.11,.24,0]],
   tilt:[["sawtooth",230,120,.14,.23,0],["square",160,100,.09,.25,.17]]
 });
 export const SOUND_EVENTS=Object.freeze(Object.keys(VOICES));

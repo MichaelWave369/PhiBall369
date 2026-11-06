@@ -36,3 +36,14 @@
 .sound-control input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;margin:5px 0}
 .sound-control label{margin-top:12px}
 .sound-control .tiny{margin:9px 0 0}
+
+.signature-mode{margin:17px 0 6px;padding:14px 12px;background:linear-gradient(130deg,#162948,#111b33);
+  border:1px solid #3d5c83;border-left:3px solid var(--accent);transition:background .2s}
+.signature-mode.active{background:linear-gradient(130deg,#144858,#17324e);box-shadow:inset 0 0 18px #76faff19}
+.signature-mode .mode-overline{font-size:9px;letter-spacing:.12em;color:#8fb4d0;margin-bottom:7px}
+.signature-mode strong{display:block;font:800 20px 'Barlow Condensed',sans-serif;letter-spacing:.06em;color:var(--accent)}
+.signature-mode p{color:#adc5dc;font-size:10px;line-height:1.65;margin:8px 0 12px}
+.mode-gauge{height:7px;border-radius:4px;background:#091629;border:1px solid #385472;overflow:hidden}
+.mode-gauge span{display:block;height:100%;background:var(--accent);transition:width .15s}
+.signature-mode.active .mode-gauge span{background:linear-gradient(90deg,var(--accent),#ffffff)}
+.mode-stats{display:flex;justify-content:space-between;gap:10px;margin-top:9px;font-size:9px;color:#d3eaf7}
