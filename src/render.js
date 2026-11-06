@@ -100,19 +100,24 @@ function drawRaisedRamp(ctx,part,table){
     const dx=next.x-prev.x,dy=next.y-prev.y;
     const len=Math.max(.001,Math.hypot(dx,dy));
     const nx=-dy/len,ny=dx/len;
-    const half=.27,offset=p.z*.18;
-    left.push({x:p.x+nx*half,y:p.y+ny*half-offset,z:p.z});
-    right.push({x:p.x-nx*half,y:p.y-ny*half-offset,z:p.z});
+    const half=.27;
+    left.push({x:p.x+nx*half,y:p.y+ny*half,z:p.z});
+    right.push({x:p.x-nx*half,y:p.y-ny*half,z:p.z});
   }
   // Vertical supports make elevation physically legible in the top-down view.
   ctx.save();
   for(const i of [10,30,50,70]){
     const p=nodes[i];
     if(p.z<.2)continue;
-    line(ctx,p.x,p.y,p.x,p.y-p.z*.19,"#092035",.20);
-    line(ctx,p.x-.035,p.y,p.x-.035,p.y-p.z*.19,"#b9e4f8",.035);
+    line(ctx,p.x,p.y,p.x,p.y+p.z*.20,"#092035",.20);
+    line(ctx,p.x-.035,p.y,p.x-.035,p.y+p.z*.20,"#b9e4f8",.035);
     circle(ctx,p.x,p.y,.13,"#102337","#91a9c4",.035);
   }
+  // Cast a soft displacement shadow. The actual rails stay directly above
+  // their X/Y collision centerline, so overhead art remains accurate.
+  ctx.beginPath();
+  nodes.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y+p.z*.20):ctx.lineTo(p.x,p.y+p.z*.20));
+  ctx.strokeStyle="#000a1f80";ctx.lineWidth=.72;ctx.stroke();
   ctx.beginPath();
   left.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
   for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i].x,right[i].y);
@@ -127,7 +132,7 @@ function drawRaisedRamp(ctx,part,table){
     ctx.strokeStyle="#f3ffff";ctx.lineWidth=.018;ctx.stroke();
   }
   ctx.beginPath();
-  nodes.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y-p.z*.18):ctx.lineTo(p.x,p.y-p.z*.18));
+  nodes.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
   ctx.setLineDash([.10,.16]);ctx.strokeStyle=table.accent+"bb";
   ctx.lineWidth=.035;ctx.stroke();ctx.setLineDash([]);
   const r=part.r;
@@ -137,7 +142,7 @@ function drawRaisedRamp(ctx,part,table){
   ctx.fillStyle="#ffffff";ctx.textAlign="center";ctx.font="bold .19px monospace";
   ctx.fillText(part.toLayer===1?"UP":"DN",part.x,part.y+r*.70);
   const end=nodes[nodes.length-1];
-  circle(ctx,end.x,end.y-end.z*.18,.16,table.accent,"#e5fcff",.035);
+  circle(ctx,end.x,end.y,.16,table.accent,"#e5fcff",.035);
   ctx.restore();
 }
 function pieces(ctx,table,layer,game,opacity=1){
@@ -208,17 +213,19 @@ function ball(ctx,game){
   if(!game.ball&&!moving)return;
   const p=moving?moving.point:game.ball.getPosition();
   const z=moving?p.z:DECK_Z[game.layer];
-  const rise=z*.18;
-  const shadow=ctx.createRadialGradient(p.x+.055,p.y+.15,.02,p.x+.055,p.y+.15,.37+z*.10);
+  // Top-down ball center always matches actual solver XY. Height is conveyed
+  // by the displacement and spread of the shadow, not a false sprite offset.
+  const shadowY=p.y+.15+z*.16;
+  const shadow=ctx.createRadialGradient(p.x+.055,shadowY,.02,p.x+.055,shadowY,.37+z*.10);
   shadow.addColorStop(0,"#00070fb9");shadow.addColorStop(1,"#00070f00");
-  circle(ctx,p.x+.055,p.y+.15,.37+z*.10,shadow);
+  circle(ctx,p.x+.055,shadowY,.37+z*.10,shadow);
   if(moving) {
-    circle(ctx,p.x,p.y-rise,.31,"#78f2ff28");
+    circle(ctx,p.x,p.y,.31,"#78f2ff28");
   }
-  if(!drawSprite(ctx,"ball",p.x-.275,p.y-.275-rise,.55,.55)){
-    const g=ctx.createRadialGradient(p.x-.085,p.y-.085-rise,.02,p.x,p.y-rise,BALL_RADIUS);
+  if(!drawSprite(ctx,"ball",p.x-.275,p.y-.275,.55,.55)){
+    const g=ctx.createRadialGradient(p.x-.085,p.y-.085,.02,p.x,p.y,BALL_RADIUS);
     g.addColorStop(0,"#fff");g.addColorStop(.5,"#aac8db");g.addColorStop(1,"#162a40");
-    circle(ctx,p.x,p.y-rise,BALL_RADIUS,g,"#eafaff",.025);
+    circle(ctx,p.x,p.y,BALL_RADIUS,g,"#eafaff",.025);
   }
 }
 
