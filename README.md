@@ -26,9 +26,9 @@ Upload the generated **dist/** directory to Netlify or another static host. The 
 
 - **A / Left Arrow:** left flipper (hold)
 - **D / Right Arrow:** right flipper (hold)
-- **Space:** launch ball
-- **N:** nudge (cooldown)
-- **On-screen controls:** touch or mouse support
+- **Space (hold and release):** charge the spring plunger, release to launch; medium power sweet spot awards a skill shot
+- **N:** nudge the table; repeated nudges cause TILT, disabling scoring and flippers until the ball drains
+- **On-screen controls:** hold/release plunger, flippers and nudge with touch or mouse
 
 Press **Enter Build Mode** to edit a table. Switch between lower (L1) and upper (L2) playfields. Place pop bumpers, targets, rails (two clicks), or a layer-changing ramp (entrance click, destination click on the other layer). Erase, undo, import and export table JSON. Edits are saved to your browser's local storage.
 
