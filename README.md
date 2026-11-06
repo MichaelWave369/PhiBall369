@@ -2,6 +2,10 @@
 
 **Browser-first React pinball physics engine and two-level table workshop.**
 
+### Secret Target Missions: ordered multi-stage quests
+
+Create missions with up to six stages, each requiring hits on a specific physical bumper, target or upward ramp. Current-stage hardware gets highlighted, and the next stage unlocks only after the previous one succeeds. System Breach and ARCLight each ship with a secret sequence to discover. The visual workshop, local saves and safe JSON export/import support these quests without scripting. See [Secret Target Missions](docs/SECRET_MISSIONS.md).
+
 ### Mission Workshop: visual quest and bonus-mode designer
 
 The workshop now offers **Table Parts** and **Quests & Modes** tabs. Create up to eight objectives, choose targets, bumper hits or upper-deck arrivals, and configure your own timed bonus mode with a multiplier, duration and activation rule. Save and test locally, then export the table as JSON with the quests and mode intact. See [Mission Workshop notes](docs/MISSION_WORKSHOP.md).

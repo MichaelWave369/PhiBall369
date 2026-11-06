@@ -262,7 +262,7 @@ export class PinballGame {
     }else if(this.layer===1){
       if(!this.tilted){
         this.score+=1200;
-        this.advanceQuest("rampRuns");
+        this.advanceQuest("rampRuns",part.id);
         this.onEvent("UPPER DECK REACHED · +1200");
       }else this.onEvent("UPPER DECK REACHED · TILT ACTIVE");
     }else this.onEvent("LOWER DECK REACHED");
@@ -317,10 +317,10 @@ export class PinballGame {
           }
         }
       }
-      if(hit.kind!=="sling")this.advanceQuest(hit.kind==="bumper"?"bumperHits":"targetHits");
+      if(hit.kind!=="sling")this.advanceQuest(hit.kind==="bumper"?"bumperHits":"targetHits",hit.id);
     }
   }
-  advanceQuest(kind) {
+  advanceQuest(kind,partId=null) {
     // Mode rewards apply to the underlying physical event; quest-completion
     // bonuses remain independent. Activation hits never retroactively multiply.
     const result=onModeEvent(this.modeState,kind,this.elapsed);
@@ -333,7 +333,13 @@ export class PinballGame {
       this.fx("mode");
       this.onEvent("MODE ACTIVE: "+this.modeState.config.label);
     }
-    for(const quest of recordQuestEvent(this.ledger,kind)) {
+    const completed=recordQuestEvent(this.ledger,kind,partId);
+    for(const stage of this.ledger.stageEvents){
+      this.fx("mode");
+      this.onEvent("SECRET STAGE "+stage.completedStage+"/"+stage.stageCount+
+        " COMPLETE · NEXT OBJECTIVE UNLOCKED");
+    }
+    for(const quest of completed) {
       this.score+=2000;
       this.fx("quest");
       this.onEvent("QUEST COMPLETE: "+quest.label.toUpperCase());
@@ -352,7 +358,7 @@ export class PinballGame {
     if(this.layer===1) {
       if(!this.tilted){
         this.score+=1200;
-        this.advanceQuest("rampRuns");
+        this.advanceQuest("rampRuns",ramp.id??null);
         this.onEvent("UPPER PLAYFIELD · +1200");
       }else this.onEvent("UPPER PLAYFIELD · TILT ACTIVE");
     } else this.onEvent("RETURN TO LOWER DECK");

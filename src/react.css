@@ -87,3 +87,7 @@
 .mission-save{width:100%;font-size:11px}
 .mission-play{border-color:var(--accent);color:var(--accent)}
 @media(max-width:600px){.mode-editor-grid{grid-template-columns:1fr}.quest-editor-card{padding:10px}}
+
+.mission-stage-note{display:block;font-size:9px;color:#7fcbdf;line-height:1.6;margin:4px 0 0;
+  font-weight:500;overflow-wrap:anywhere}
+.mission.complete .mission-stage-note{color:#a7eccf}

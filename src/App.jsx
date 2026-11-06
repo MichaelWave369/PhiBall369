@@ -5,6 +5,7 @@ import {normalizeTable} from "./validation.js";
 import {drawPinball} from "./render.js";
 import {ArcadeAudio,SOUND_THEMES} from "./audio.js";
 import {modeActive,modeRemaining} from "./modes.js";
+import {questStatus} from "./quests.js";
 import MissionDesigner from "./MissionDesigner.jsx";
 import {applyMissionDraft} from "./workshop.js";
 
@@ -47,8 +48,7 @@ function snapshot(game) {
       activations:game.modeState.activations
     }:null,
     quests:game.ledger.quests.map(q=>({
-      ...q,count:Math.min(q.goal,game.ledger.counts[q.kind]||0),
-      completed:game.ledger.completed.includes(q.id)
+      ...q,...questStatus(game.ledger,q)
     }))
   };
 }
@@ -382,7 +382,7 @@ export default function App() {
           <small>THE PHYSICS ARCADE</small></div>
       </div>
       <div className="header-right"><span className="live-dot"></span> LIVE REACT ARCADE
-        <span className="version">RUNG 08 · MISSION WORKSHOP</span>
+        <span className="version">RUNG 09 · SECRET SEQUENCES</span>
         <a href="https://github.com/MichaelWave369/PhiBall369" target="_blank" rel="noopener noreferrer">GITHUB</a>
       </div>
     </header>
@@ -422,8 +422,14 @@ export default function App() {
         <div className="gauge-label"><span>TILT DANGER</span><strong>{hud.tilted?"TILT":Math.round(hud.tiltMeter*100)+"%"}</strong></div>
         <div className={"gauge"+(hud.tilted?" tilted":"")}><div className="gauge-fill danger" style={{width:(hud.tiltMeter*100)+"%"}} /></div>
         <div className="section-title spaced">MISSION LEDGER <span className="line"></span></div>
-        <div className="missions">{hud.quests.map(q=><div key={q.id} className={"mission"+(q.completed?" complete":"")}>
-          <span>{q.completed?"✓":"○"} {q.label}</span>
+        <div className="missions">{hud.quests.map(q=><div key={q.id}
+          className={"mission"+(q.completed?" complete":"")}>
+          <span>{q.completed?"✓":"○"} {q.label}
+            {q.staged&&<small className="mission-stage-note">
+              {q.completed?"SEQUENCE COMPLETE":"STAGE "+(q.stageIndex+1)+"/"+q.stageCount+
+                " · "+(q.partId??"ANY")+" · "+q.kind}
+            </small>}
+          </span>
           <b>{q.count} / {q.goal}</b>
         </div>)}</div>
         <div className="announcement" role="status" aria-live="polite">{announcement}</div>
@@ -552,7 +558,7 @@ export default function App() {
           <div><b>03</b><span>ARCLIGHT</span><small>STARSHIP RAMP RUN</small></div>
         </div>
         <div className="divider"></div>
-        <p className="field-footnote">Build eight original quests and your own timed bonus mode using the Mission Workshop. Save locally or export a safe, shareable JSON table. Fully free-body 3D collision remains future work.</p>
+        <p className="field-footnote">Quest sequences now support exact physical part IDs and up to six ordered stages. Only the current stage can advance. Imported missions remain declarative and script-free.</p>
       </aside>
     </main>
   </>;

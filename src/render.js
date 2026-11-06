@@ -3,6 +3,7 @@ import {LOWER_RAILS,UPPER_RAILS,SLINGSHOTS,DRAIN_ZONES} from "./geometry.js";
 import {drawSprite} from "./sprites.js";
 import {makeRampTrack,DECK_Z} from "./rampGeometry.js";
 import {modeActive,modeRemaining} from "./modes.js";
+import {questStatus} from "./quests.js";
 
 const SCALE=50;
 const PI=Math.PI;
@@ -242,6 +243,25 @@ function pieces(ctx,table,layer,game,opacity=1){
       drawRaisedRamp(ctx,part,table);
 
     }
+  }
+  // Only highlight a stage's exact physical target. The next stage stays
+  // visually locked until its predecessor is completed.
+  for(const quest of game.ledger.quests){
+    const status=questStatus(game.ledger,quest);
+    if(!status.staged||status.completed||!status.partId)continue;
+    const part=table.objects.find(p=>p.id===status.partId&&p.layer===layer);
+    if(!part)continue;
+    const phase=(Math.sin(game.elapsed*6)+1)/2;
+    const radius=(part.r??.44)+.31+phase*.09;
+    ctx.save();
+    ctx.strokeStyle=table.accent;ctx.lineWidth=.055;
+    ctx.setLineDash([.13,.10]);
+    ctx.beginPath();ctx.arc(part.x,part.y,radius,0,Math.PI*2);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle="#e9ffff";ctx.font="bold .18px monospace";
+    ctx.textAlign="center";
+    ctx.fillText("MISSION "+(status.stageIndex+1),part.x,part.y-radius-.14);
+    ctx.restore();
   }
   ctx.restore();
 }

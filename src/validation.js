@@ -6,6 +6,28 @@ const safeText = (text,fallback,max=90) => typeof text === "string"
   ? text.replace(/[<>]/g,"").trim().slice(0,max) || fallback : fallback;
 const layer = value => value === 1 ? 1 : 0;
 const modeKinds=new Set(["bumperHits","targetHits","rampRuns"]);
+const maximumStages=6;
+function normalizeStages(raw,objects){
+  if(!Array.isArray(raw)||raw.length===0)return null;
+  const stages=raw.slice(0,maximumStages)
+    .filter(s=>s&&typeof s==="object"&&!Array.isArray(s)&&modeKinds.has(s.kind))
+    .map(s=>{
+      const desired=typeof s.partId==="string"?
+        s.partId.replace(/[^a-zA-Z0-9_-]/g,"").slice(0,40):"";
+      const matched=objects.some(p=>p.id===desired&&(
+        s.kind==="bumperHits"?p.type==="bumper":
+        s.kind==="targetHits"?p.type==="target":
+        p.type==="ramp"&&p.layer===0&&p.toLayer===1
+      ));
+      // Unknown/removed parts downgrade to an ordinary category match,
+      // never to an unfinishable secret objective.
+      return {
+        kind:s.kind,goal:Math.round(finite(s.goal,1,1,99)),
+        partId:matched?desired:null
+      };
+    });
+  return stages.length?stages:null;
+}
 function normalizeMode(raw){
   if(!raw||typeof raw!=="object"||Array.isArray(raw))return null;
   if(!modeKinds.has(raw.triggerKind)||!modeKinds.has(raw.bonusKind))return null;
@@ -67,9 +89,11 @@ export function normalizeTable(raw) {
         id=requested.slice(0,40-trail.length)+trail;
       }
       missionIds.add(id);
+      const stages=normalizeStages(q.stages,objects);
       return {
         id,label:safeText(q.label,"Complete quest "+(i+1),95),
-        kind:q.kind,goal:Math.round(finite(q.goal,3,1,99))
+        kind:q.kind,goal:Math.round(finite(q.goal,3,1,99)),
+        ...(stages?{stages}:{})
       };
     });
   return {
