@@ -1,6 +1,8 @@
 import {useEffect,useState} from "react";
 import {EVENT_OPTIONS,MAX_QUESTS,addQuest,removeQuest,moveQuest,updateQuest,
-  defaultMode,updateMode,missionDraft} from "./workshop.js";
+  defaultMode,updateMode,missionDraft,toggleQuestSequence,addQuestStage,
+  editQuestStage,removeQuestStage,moveQuestStage} from "./workshop.js";
+import {MAX_STAGES} from "./quests.js";
 
 const typeName=kind=>EVENT_OPTIONS.find(item=>item.value===kind)?.label??kind;
 function EventType({id,value,onChange}){
@@ -17,13 +19,16 @@ export default function MissionDesigner({table,onSave,onPlay}){
   const editQuest=(id,field,value)=>setDraft(previous=>({
     ...previous,quests:updateQuest(previous.quests,id,field,value)
   }));
+  const changeStages=(action,id,...values)=>setDraft(previous=>({
+    ...previous,quests:action(previous.quests,id,...values)
+  }));
   const editMode=(field,value)=>setDraft(previous=>({
     ...previous,mode:updateMode(previous.mode,field,value)
   }));
   const save=(andPlay=false)=>andPlay?onPlay(draft):onSave(draft);
   return <section className="mission-designer" aria-label="Quest and special mode designer">
-    <p className="builder-lede">Write the story rules for this table. These objectives use real
-      bumper collisions, target hits, and successful upper-deck ascents.</p>
+    <p className="builder-lede">Build classic hit-count quests, or secret ordered sequences
+      tied to exact bumpers, targets and upper-deck ramps.</p>
     <div className="section-title">MACHINE IDENTITY <span className="line"></span></div>
     <label htmlFor="design-name">MACHINE NAME</label>
     <input id="design-name" className="editor-input" type="text" maxLength={64}
@@ -63,13 +68,64 @@ export default function MissionDesigner({table,onSave,onPlay}){
       <input id={"quest-label-"+quest.id} className="editor-input" type="text"
         maxLength={95} value={quest.label}
         onChange={e=>editQuest(quest.id,"label",e.target.value)}/>
-      <label htmlFor={"quest-kind-"+quest.id}>COUNT THIS EVENT</label>
-      <EventType id={"quest-kind-"+quest.id} value={quest.kind}
-        onChange={value=>editQuest(quest.id,"kind",value)}/>
-      <label htmlFor={"quest-goal-"+quest.id}>REQUIRED HITS / ASCENTS</label>
-      <input id={"quest-goal-"+quest.id} className="editor-input" type="number"
-        min={1} max={99} step={1} value={quest.goal}
-        onChange={e=>editQuest(quest.id,"goal",e.target.value)}/>
+      <label className="mode-toggle quest-sequence-toggle">
+        <input type="checkbox" checked={Boolean(quest.stages?.length)}
+          onChange={e=>changeStages(toggleQuestSequence,quest.id,e.target.checked)}/>
+        ORDERED SECRET MISSION
+      </label>
+      {quest.stages?.length?<div className="quest-sequence">
+        <p className="builder-lede">Only the current stage can advance.
+          Complete it to unlock the next target or ramp. Incorrect hits do not skip stages.</p>
+        {quest.stages.map((stage,j)=>{
+          const eligible=table.objects.filter(p=>
+            stage.kind==="targetHits"?p.type==="target":
+            stage.kind==="bumperHits"?p.type==="bumper":
+            p.type==="ramp"&&p.layer===0&&p.toLayer===1
+          );
+          return <div className="quest-stage" key={j}>
+            <div className="quest-toolbar">
+              <b>STAGE {j+1} / {quest.stages.length}</b>
+              <div className="quest-actions">
+                <button disabled={j===0} aria-label={"Move stage "+(j+1)+" earlier"}
+                  onClick={()=>changeStages(moveQuestStage,quest.id,j,-1)}>↑</button>
+                <button disabled={j===quest.stages.length-1}
+                  aria-label={"Move stage "+(j+1)+" later"}
+                  onClick={()=>changeStages(moveQuestStage,quest.id,j,1)}>↓</button>
+                <button disabled={quest.stages.length===1}
+                  aria-label={"Remove stage "+(j+1)}
+                  onClick={()=>changeStages(removeQuestStage,quest.id,j)}>×</button>
+              </div>
+            </div>
+            <label htmlFor={"stage-kind-"+quest.id+"-"+j}>STAGE EVENT</label>
+            <EventType id={"stage-kind-"+quest.id+"-"+j} value={stage.kind}
+              onChange={value=>changeStages(editQuestStage,quest.id,j,"kind",value)}/>
+            <label htmlFor={"stage-part-"+quest.id+"-"+j}>EXACT PHYSICAL PART</label>
+            <select id={"stage-part-"+quest.id+"-"+j} value={stage.partId??""}
+              onChange={e=>changeStages(editQuestStage,quest.id,j,"partId",e.target.value)}>
+              <option value="">Any matching part</option>
+              {eligible.map(p=><option key={p.id} value={p.id}>
+                {p.id} · {p.type==="ramp"?"ASCENT":"L"+(p.layer+1)+" "+p.type}
+              </option>)}
+            </select>
+            <label htmlFor={"stage-goal-"+quest.id+"-"+j}>HITS FOR THIS STAGE</label>
+            <input id={"stage-goal-"+quest.id+"-"+j} className="editor-input"
+              type="number" min={1} max={99} step={1} value={stage.goal}
+              onChange={e=>changeStages(editQuestStage,quest.id,j,"goal",e.target.value)}/>
+          </div>;
+        })}
+        <button className="mission-add" disabled={quest.stages.length>=MAX_STAGES}
+          onClick={()=>changeStages(addQuestStage,quest.id)}>
+          + ADD STAGE ({quest.stages.length}/{MAX_STAGES})
+        </button>
+      </div>:<>
+        <label htmlFor={"quest-kind-"+quest.id}>COUNT THIS EVENT</label>
+        <EventType id={"quest-kind-"+quest.id} value={quest.kind}
+          onChange={value=>editQuest(quest.id,"kind",value)}/>
+        <label htmlFor={"quest-goal-"+quest.id}>REQUIRED HITS / ASCENTS</label>
+        <input id={"quest-goal-"+quest.id} className="editor-input" type="number"
+          min={1} max={99} step={1} value={quest.goal}
+          onChange={e=>editQuest(quest.id,"goal",e.target.value)}/>
+      </>}
     </article>)}
     <button className="mission-add" disabled={draft.quests.length>=MAX_QUESTS}
       onClick={()=>setDraft(prev=>({...prev,quests:addQuest(prev.quests)}))}>
