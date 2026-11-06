@@ -2,6 +2,10 @@
 
 **Browser-first React pinball physics engine and two-level table workshop.**
 
+### Mission Workshop: visual quest and bonus-mode designer
+
+The workshop now offers **Table Parts** and **Quests & Modes** tabs. Create up to eight objectives, choose targets, bumper hits or upper-deck arrivals, and configure your own timed bonus mode with a multiplier, duration and activation rule. Save and test locally, then export the table as JSON with the quests and mode intact. See [Mission Workshop notes](docs/MISSION_WORKSHOP.md).
+
 ### Signature Machines: unique physics layouts and timed mission modes
 
 PhiBall Lab, System Breach and ARCLight 3333 now have independent real collision layouts, new original playfield markings and distinct timed special modes. Earn Quantum Combo, Security Breach or Reactor Overdrive through real hits and ramp ascents. React shows charging progress and active countdowns, and game events apply the bonus points. See [Signature Machines](docs/SIGNATURE_MACHINES.md).
