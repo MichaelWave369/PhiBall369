@@ -2,6 +2,10 @@
 
 **Browser-first React pinball physics engine and two-level table workshop.**
 
+### Sound + Light Rung: responsive arcade personality
+
+An opt-in Web Audio engine generates original synthesized flipper, bumper, slingshot, target, ramp, skill-shot, quest, tilt, and drain effects. Three per-table sound profiles and live-reactive playfield lighting add character without relying on copyrighted samples or requiring new physics. Audio begins disabled until **Enable Arcade Audio** is clicked. See [Sound + Light notes](docs/SOUND_AND_LIGHT.md).
+
 ### Elevation Rung: curved 2.5D guided ramps
 
 Ramps now have a continuous cubic Bézier X/Y/Z path with grade-sensitive motion, on-ramp ball travel, rollover/rollback, and tangent-aligned reentry into the destination Planck deck. The React workshop includes a curvature slider for creating and shaping ramps, and the physics overlay exposes live elevation. [Technical details and limitations](docs/ELEVATION_RUNG.md).

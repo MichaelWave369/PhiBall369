@@ -3,6 +3,7 @@ import {PinballGame} from "./physics.js";
 import {PRESETS,findPreset,WIDTH,HEIGHT,MAX_OBJECTS,copyTable} from "./tables.js";
 import {normalizeTable} from "./validation.js";
 import {drawPinball} from "./render.js";
+import {ArcadeAudio,SOUND_THEMES} from "./audio.js";
 
 const STORAGE="phiball369-table-v1";
 const emptyControl={left:false,right:false};
@@ -78,12 +79,13 @@ function PlungerButton({game,disabled,primary=false,refresh}) {
     {primary?<>CHARGE PLUNGER <span>HOLD SPACE</span></>:"HOLD TO LAUNCH"}
   </button>;
 }
-function TouchFlipper({side,controls}) {
+function TouchFlipper({side,controls,onFlipper}) {
   const label=side==="left"?"◀ LEFT FLIPPER":"RIGHT FLIPPER ▶";
   const release=()=>{controls.current[side]=false;};
   return <button aria-label={label}
     onPointerDown={event=>{
       event.preventDefault();controls.current[side]=true;
+      onFlipper?.();
       event.currentTarget.setPointerCapture(event.pointerId);
     }}
     onPointerUp={release} onPointerCancel={release}
@@ -95,8 +97,20 @@ export default function App() {
   const [activePreset,setActivePreset]=useState(table.id==="custom"?"custom":"lab");
   const [hasCustom,setHasCustom]=useState(table.id==="custom");
   const [announcement,setAnnouncement]=useState("READY FOR LAUNCH");
+  const audioRef=useRef(null);
+  if(!audioRef.current){
+    audioRef.current=new ArcadeAudio();
+    audioRef.current.setTheme(table.id);
+  }
+  const [audioEnabled,setAudioEnabled]=useState(false);
+  const [audioMuted,setAudioMuted]=useState(false);
+  const [audioVolume,setAudioVolume]=useState(55);
+  const [audioError,setAudioError]=useState("");
   const gameRef=useRef(null);
-  if(!gameRef.current)gameRef.current=new PinballGame(table,message=>setAnnouncement(message));
+  if(!gameRef.current)gameRef.current=new PinballGame(table,(message,event)=>{
+    if(message)setAnnouncement(message);
+    if(event)audioRef.current?.play(event);
+  });
   const game=gameRef.current;
   const [hud,setHud]=useState(()=>snapshot(game));
   const [editor,setEditor]=useState(false);
@@ -119,8 +133,25 @@ export default function App() {
   const fileInput=useRef(null);
 
   function refresh() {setHud(snapshot(gameRef.current));}
+  async function enableAudio(){
+    try{
+      const available=await audioRef.current.unlock();
+      setAudioEnabled(available);
+      setAudioError(available?"":"This browser does not support Web Audio.");
+    }catch(error){
+      setAudioEnabled(false);
+      setAudioError("Unable to start audio. Check browser permissions.");
+    }
+  }
+  function setMuted(muted){
+    setAudioMuted(muted);audioRef.current.setMuted(muted);
+  }
+  function changeVolume(value){
+    const n=Number(value);setAudioVolume(n);audioRef.current.setVolume(n/100);
+  }
   function loadMachine(next,selection) {
-    pendingRef.current=null;setPending(null);history.current=[];
+    audioRef.current.setTheme(next.id);
+    pendingRef.current=setPending(null);history.current=[];
     selectedRampIdRef.current=null;setSelectedRampId(null);
     tableRef.current=next;setTable(next);
     setActivePreset(selection);game.setTable(next);
@@ -138,6 +169,7 @@ export default function App() {
   function storeCustom(next) {
     const safe={...normalizeTable(next),id:"custom"};
     tableRef.current=safe;setTable(safe);
+    audioRef.current.setTheme("custom");
     setHasCustom(true);setActivePreset("custom");
     try{localStorage.setItem(STORAGE,JSON.stringify(safe));}
     catch(error){setAnnouncement("LOCAL SAVE FAILED · EXPORT TABLE INSTEAD");}
@@ -271,6 +303,8 @@ export default function App() {
       if(k==="arrowleft"||k==="a")controls.current.left=true;
       if(k==="arrowright"||k==="d")controls.current.right=true;
       if(event.repeat||editorRef.current)return;
+      if((k==="arrowleft"||k==="a"||k==="arrowright"||k==="d"))
+        audioRef.current?.play({type:"flipper"});
       if(k===" ")gameRef.current.beginCharge();
       if(k==="n")gameRef.current.nudge();
     };
@@ -312,7 +346,7 @@ export default function App() {
           <small>THE PHYSICS ARCADE</small></div>
       </div>
       <div className="header-right"><span className="live-dot"></span> LIVE REACT ARCADE
-        <span className="version">RUNG 05 · ELEVATION</span>
+        <span className="version">RUNG 06 · SOUND + LIGHT</span>
         <a href="https://github.com/MichaelWave369/PhiBall369" target="_blank" rel="noopener noreferrer">GITHUB</a>
       </div>
     </header>
@@ -367,15 +401,33 @@ export default function App() {
           onPointerDown={onCanvasClick} className="drag-area"
           aria-label="PhiBall369 playable pinball table and two-level workshop" /></div>
         <div className="touch-controls">
-          <TouchFlipper side="left" controls={controls}/>
+          <TouchFlipper side="left" controls={controls}
+            onFlipper={()=>audioRef.current?.play({type:"flipper"})}/>
           <PlungerButton game={game} refresh={refresh} disabled={editor||hud.status!=="ready"}/>
-          <TouchFlipper side="right" controls={controls}/>
+          <TouchFlipper side="right" controls={controls}
+            onFlipper={()=>audioRef.current?.play({type:"flipper"})}/>
         </div>
         <div className="nudge-touch"><button disabled={editor||hud.status!=="playing"||hud.tilted}
           onClick={()=>{game.nudge();refresh();}}>NUDGE · TILT WARNING</button></div>
         <p className="footer-note">CHROME SPRITES · CONTINUOUS-HEIGHT SPLINE RAMPS · TWO PLANCK DECKS</p>
       </section>
       <aside className="panel right-panel">
+        <div className="section-title">ARCADE AUDIO <span className="line"></span></div>
+        <p className="muted">Original synthesized pinball effects. Sound stays off until enabled.</p>
+        {!audioEnabled?
+          <button className="sound-enable" onClick={enableAudio}>ENABLE ARCADE AUDIO</button>:
+          <div className="sound-control">
+            <button onClick={()=>setMuted(!audioMuted)}>
+              {audioMuted?"UNMUTE SOUND":"MUTE SOUND"}
+            </button>
+            <label htmlFor="audio-volume">VOLUME · {audioVolume}%</label>
+            <input id="audio-volume" type="range" min="0" max="100" step="5"
+              value={audioVolume} onChange={event=>changeVolume(event.target.value)}
+              aria-label="Arcade sound volume"/>
+            <p className="tiny">SOUND PROFILE · {SOUND_THEMES[table.id]?.label??SOUND_THEMES.custom.label}</p>
+          </div>}
+        {audioError&&<p className="tiny" role="alert">{audioError}</p>}
+        <div className="divider"></div>
         <div className="section-title">THE WORKSHOP <span className="line"></span></div>
         <p className="muted">Build tables with parts that affect the actual physics simulation.</p>
         <label className="debug-option"><input type="checkbox" checked={debug}
@@ -437,7 +489,7 @@ export default function App() {
           <div><b>03</b><span>ARCLIGHT</span><small>STARSHIP RAMP RUN</small></div>
         </div>
         <div className="divider"></div>
-        <p className="field-footnote">Curved 2.5D ramps now guide the ball continuously through elevation changes. Fully free-moving 3D ball collision and calibrated spin remain future work.</p>
+        <p className="field-footnote">Original opt-in procedural audio and reactive lamps added. Full 3D collision, calibrated spin and licensed music packs remain future work.</p>
       </aside>
     </main>
   </>;

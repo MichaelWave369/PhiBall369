@@ -90,8 +90,14 @@ export class PinballGame {
     this.upperTime=0;this.lastHit=new Map();this.ledger=newQuestLedger(this.table.quests);
     this.stuckSeconds=0;this.misfireSeconds=0;this.rescueCount=0;this.lastRescue=null;
     this.rampMotion=null;
+    this.lastEffect=null;this.effectSequence=0;
     this.ball=addBall(this.scenes[0].world,9.7,15.85);
     this.pendingHits.length=0;
+  }
+  fx(type,details={}) {
+    const event={type,at:this.elapsed,sequence:++this.effectSequence,...details};
+    this.lastEffect=event;
+    this.onEvent("",event);
   }
   beginCharge() {
     if(this.paused || this.status!=="ready" || this.charging)return false;
@@ -112,6 +118,7 @@ export class PinballGame {
     this.skillShotClaimed=false;this.status="playing";
     // Shooter starts in its own gated right-hand channel.
     this.ball.setLinearVelocity(V(-.05,-(12.3+9.5*power)));
+    this.fx("launch",{power});
     this.onEvent(power>=.85?"FULL POWER LAUNCH!":"BALL LAUNCHED · "+Math.round(power*100)+"% POWER");
     return true;
   }
@@ -123,8 +130,12 @@ export class PinballGame {
     this.ball.applyLinearImpulse(V(-.35,-.95),this.ball.getWorldCenter(),true);
     if(this.tiltMeter>=1) {
       this.tilted=true;
+      this.fx("tilt");
       this.onEvent("TILT! FLIPPERS AND SCORING DISABLED UNTIL NEXT BALL");
-    } else this.onEvent(this.tiltMeter>=.65?"DANGER · TILT WARNING":"NUDGE · WATCH YOUR TILT");
+    } else {
+      this.fx("nudge");
+      this.onEvent(this.tiltMeter>=.65?"DANGER · TILT WARNING":"NUDGE · WATCH YOUR TILT");
+    }
     return true;
   }
   stepFrame(dt,keys={}) {
@@ -162,6 +173,7 @@ export class PinballGame {
       this.ball.setLinearVelocity(V(-5.4,-2.8));
       if(!this.skillShotClaimed && !this.tilted && this.launchStrength>=.60 && this.launchStrength<=.80) {
         this.score+=1500;
+        this.fx("skill");
         this.onEvent("SKILL SHOT · +1,500");
       }
       this.skillShotClaimed=true;
@@ -198,6 +210,7 @@ export class PinballGame {
       point:sampleRamp(track,0),seconds:0
     };
     this.stuckSeconds=0;this.misfireSeconds=0;
+    this.fx("ramp");
     this.onEvent(ramp.toLayer===1?"RAMP ASCENT · CLIMBING TO UPPER DECK":"RAMP DESCENT · RETURN TO LOWER DECK");
     return true;
   }
@@ -237,6 +250,7 @@ export class PinballGame {
     this.upperTime=0;
     this.stuckSeconds=0;
     this.misfireSeconds=0;
+    this.fx(completed?"arrival":"ramp");
     if(!completed){
       this.onEvent("RAMP STALLED · BALL ROLLED BACK");
     }else if(this.layer===1){
@@ -284,6 +298,7 @@ export class PinballGame {
       if(this.elapsed-(this.lastHit.get(key)??-10)<0.16)continue;
       this.lastHit.set(key,this.elapsed);
       this.score+=hit.kind==="bumper"?100:hit.kind==="sling"?75:500;
+      this.fx("hit",{kind:hit.kind,layer:hit.layer,id:hit.id});
       if(hit.kind==="bumper"||hit.kind==="sling") {
         const p=this.ball?.getPosition();
         if(p) {
@@ -302,6 +317,7 @@ export class PinballGame {
   advanceQuest(kind) {
     for(const quest of recordQuestEvent(this.ledger,kind)) {
       this.score+=2000;
+      this.fx("quest");
       this.onEvent("QUEST COMPLETE: "+quest.label.toUpperCase());
     }
   }
@@ -324,6 +340,7 @@ export class PinballGame {
     } else this.onEvent("RETURN TO LOWER DECK");
   }
   drain() {
+    this.fx("drain");
     if(this.ball)this.scenes[this.layer].world.destroyBody(this.ball);
     this.ball=null;this.rampMotion=null;
     this.balls--;

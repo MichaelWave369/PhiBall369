@@ -31,3 +31,8 @@
 .ramp-shaper label{margin:0 0 12px;display:block;color:#b6e1f0}
 .ramp-shaper input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
 .ramp-shaper .tiny{margin:12px 0 0}
+
+.sound-enable,.sound-control>button{width:100%;margin:14px 0 7px;color:#b9f9ff;border-color:#5186a1}
+.sound-control input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;margin:5px 0}
+.sound-control label{margin-top:12px}
+.sound-control .tiny{margin:9px 0 0}
