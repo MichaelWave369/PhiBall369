@@ -24,6 +24,8 @@ function snapshot(game) {
   return {
     score:game.score,balls:game.balls,layer:game.layer,
     status:game.status,paused:game.paused,
+    charge:game.charge,charging:game.charging,
+    tiltMeter:game.tiltMeter,tilted:game.tilted,
     quests:game.ledger.quests.map(q=>({
       ...q,count:Math.min(q.goal,game.ledger.counts[q.kind]||0),
       completed:game.ledger.completed.includes(q.id)
@@ -45,6 +47,31 @@ function saveJSON(table) {
   const anchor=document.createElement("a");
   anchor.href=url;anchor.download="phiball369-table.json";anchor.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function PlungerButton({game,disabled,primary=false,refresh}) {
+  const holding=useRef(false);
+  const release=()=>{
+    if(!holding.current)return;
+    holding.current=false;
+    game.releaseCharge();refresh();
+  };
+  return <button className={primary?"primary":undefined}
+    disabled={disabled} aria-label="Hold to charge plunger, release to launch"
+    onPointerDown={event=>{
+      if(disabled)return;
+      holding.current=game.beginCharge();
+      if(holding.current)event.currentTarget.setPointerCapture(event.pointerId);
+    }}
+    onPointerUp={release}
+    onPointerCancel={()=>{
+      if(holding.current){holding.current=false;game.cancelCharge();refresh();}
+    }}
+    onLostPointerCapture={()=>{
+      if(holding.current){holding.current=false;game.cancelCharge();refresh();}
+    }}
+    onClick={()=>{if(game.status==="ready"){game.launch();refresh();}}}>
+    {primary?<>CHARGE PLUNGER <span>HOLD SPACE</span></>:"HOLD TO LAUNCH"}
+  </button>;
 }
 function TouchFlipper({side,controls}) {
   const label=side==="left"?"◀ LEFT FLIPPER":"RIGHT FLIPPER ▶";
@@ -187,7 +214,6 @@ export default function App() {
     const y=(event.clientY-rect.top)*HEIGHT/rect.height;
     placePart(x,y);
   }
-  function launch() {if(!editorRef.current){game.launch();refresh();}}
   function restart() {
     game.reset();if(editorRef.current)game.paused=true;
     setAnnouncement("FRESH GAME · PRESS SPACE");refresh();
@@ -195,21 +221,25 @@ export default function App() {
   function pause() {game.togglePause();refresh();}
   useEffect(()=>{
     const down=event=>{
-      if(["INPUT","SELECT","TEXTAREA"].includes(document.activeElement?.tagName))return;
+      if(["INPUT","SELECT","TEXTAREA","BUTTON"].includes(document.activeElement?.tagName))return;
       const k=event.key.toLowerCase();
       if(["arrowleft","arrowright","a","d"," ","n"].includes(k))event.preventDefault();
       if(k==="arrowleft"||k==="a")controls.current.left=true;
       if(k==="arrowright"||k==="d")controls.current.right=true;
       if(event.repeat||editorRef.current)return;
-      if(k===" ")gameRef.current.launch();
+      if(k===" ")gameRef.current.beginCharge();
       if(k==="n")gameRef.current.nudge();
     };
     const up=event=>{
       const k=event.key.toLowerCase();
       if(k==="arrowleft"||k==="a")controls.current.left=false;
       if(k==="arrowright"||k==="d")controls.current.right=false;
+      if(k===" "){gameRef.current.releaseCharge();}
     };
-    const blur=()=>{controls.current.left=false;controls.current.right=false;};
+    const blur=()=>{
+      controls.current.left=false;controls.current.right=false;
+      gameRef.current.cancelCharge();
+    };
     window.addEventListener("keydown",down);window.addEventListener("keyup",up);
     window.addEventListener("blur",blur);
     const context=canvasRef.current.getContext("2d");
@@ -260,6 +290,11 @@ export default function App() {
         <div className="stat-line"><span>PLAYFIELD</span><strong>{editor?
           (editLayer===0?"EDIT LOWER · L1":"EDIT UPPER · L2"):
           (hud.layer===0?"LOWER · L1":"UPPER · L2")}</strong></div>
+        <div className="section-title spaced">PLUNGER + TILT <span className="line"></span></div>
+        <div className="gauge-label"><span>SPRING CHARGE</span><strong>{Math.round(hud.charge*100)}%</strong></div>
+        <div className="gauge"><div className="gauge-fill" style={{width:(hud.charge*100)+"%"}} /></div>
+        <div className="gauge-label"><span>TILT DANGER</span><strong>{hud.tilted?"TILT":Math.round(hud.tiltMeter*100)+"%"}</strong></div>
+        <div className={"gauge"+(hud.tilted?" tilted":"")}><div className="gauge-fill danger" style={{width:(hud.tiltMeter*100)+"%"}} /></div>
         <div className="section-title spaced">MISSION LEDGER <span className="line"></span></div>
         <div className="missions">{hud.quests.map(q=><div key={q.id} className={"mission"+(q.completed?" complete":"")}>
           <span>{q.completed?"✓":"○"} {q.label}</span>
@@ -267,14 +302,14 @@ export default function App() {
         </div>)}</div>
         <div className="announcement" role="status" aria-live="polite">{announcement}</div>
         <div className="divider"></div>
-        <button className="primary" disabled={editor||hud.status!=="ready"} onClick={launch}>LAUNCH BALL <span>SPACE</span></button>
+        <PlungerButton primary game={game} refresh={refresh} disabled={editor||hud.status!=="ready"}/>
         <div className="two-buttons"><button disabled={editor||hud.status!=="playing"} onClick={pause}>{hud.paused?"RESUME":"PAUSE"}</button>
           <button onClick={restart}>RESTART</button></div>
         <div className="control-help"><b>CONTROLS</b><br/>
           <span>← / A</span> LEFT FLIPPER<br/>
           <span>→ / D</span> RIGHT FLIPPER<br/>
-          <span>SPACE</span> LAUNCH BALL<br/>
-          <span>N</span> NUDGE THE TABLE
+          <span>SPACE</span> HOLD / RELEASE PLUNGER<br/>
+          <span>N</span> NUDGE (TILT RISK)
         </div>
       </aside>
       <section className="playfield-column">
@@ -288,10 +323,12 @@ export default function App() {
           aria-label="PhiBall369 playable pinball table and two-level workshop" /></div>
         <div className="touch-controls">
           <TouchFlipper side="left" controls={controls}/>
-          <button id="touch-launch" disabled={editor||hud.status!=="ready"} onClick={launch}>LAUNCH</button>
+          <PlungerButton game={game} refresh={refresh} disabled={editor||hud.status!=="ready"}/>
           <TouchFlipper side="right" controls={controls}/>
         </div>
-        <p className="footer-note">FIXED-STEP PLANCK / BOX2D · TWO PHYSICS LAYERS · BUILT WITH REACT</p>
+        <div className="nudge-touch"><button disabled={editor||hud.status!=="playing"||hud.tilted}
+          onClick={()=>{game.nudge();refresh();}}>NUDGE · TILT WARNING</button></div>
+        <p className="footer-note">FIXED-STEP PLANCK / BOX2D · CHARGEABLE PLUNGER · TILT RULES · TWO LAYERS</p>
       </section>
       <aside className="panel right-panel">
         <div className="section-title">THE WORKSHOP <span className="line"></span></div>

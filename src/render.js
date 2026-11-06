@@ -82,6 +82,18 @@ function flippers(ctx,game) {
     disk(ctx,0,0,.21,"#e9f5ff","#385c7d");ctx.restore();
   }
 }
+function shooterCharge(ctx,game) {
+  if(game.status==="ready" && game.charge>0) {
+    const fill=Math.min(1,game.charge);
+    ctx.fillStyle="#142a46";ctx.fillRect(9.40,15.1,.30,1.5);
+    ctx.fillStyle=fill>.8?"#ffb95e":"#69edfd";
+    ctx.fillRect(9.40,16.6-1.5*fill,.30,1.5*fill);
+  }
+  if(game.tilted) {
+    ctx.fillStyle="#ff5e77";ctx.font="bold .58px system-ui";
+    ctx.textAlign="center";ctx.fillText("TILT",5.25,12.6);
+  }
+}
 function ball(ctx,game) {
   if(!game.ball)return;
   const p=game.ball.getPosition();
@@ -104,6 +116,7 @@ export function drawPinball(ctx,game,table,editor=false,editLayer=0,pending=null
   }else {
     pieces(ctx,table,0,1);flippers(ctx,game);
     pieces(ctx,table,1,game.layer===1?1:.26);
+    shooterCharge(ctx,game);
     ball(ctx,game);
   }
   ctx.restore();
