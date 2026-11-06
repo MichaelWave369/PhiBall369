@@ -97,7 +97,7 @@ export class PinballGame {
   fx(type,details={}) {
     const event={type,at:this.elapsed,sequence:++this.effectSequence,...details};
     this.lastEffect=event;
-    this.onEvent(null,event);
+    this.onEvent("",event);
   }
   beginCharge() {
     if(this.paused || this.status!=="ready" || this.charging)return false;
