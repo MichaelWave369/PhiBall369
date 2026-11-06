@@ -10,19 +10,19 @@ export function copyTable(table) {
 // These are different physical layouts, not palette swaps. Shooter lane,
 // main flippers, fixed slings and drain geometry remain shared and calibrated.
 const labParts=[
-  {id:"lab-b1",type:"bumper",layer:0,x:3.0,y:5.2,r:.48},
-  {id:"lab-b2",type:"bumper",layer:0,x:5.25,y:3.85,r:.53},
-  {id:"lab-b3",type:"bumper",layer:0,x:7.45,y:5.3,r:.48},
-  {id:"lab-t1",type:"target",layer:0,x:2.05,y:9.8,r:.30},
-  {id:"lab-t2",type:"target",layer:0,x:5.2,y:10.0,r:.30},
-  {id:"lab-t3",type:"target",layer:0,x:8.1,y:9.5,r:.30},
-  {id:"lab-w1",type:"wall",layer:0,x1:1.25,y1:11.7,x2:2.45,y2:12.35},
-  {id:"lab-w2",type:"wall",layer:0,x1:9.0,y1:11.7,x2:7.8,y2:12.35},
-  {id:"lab-up",type:"ramp",layer:0,toLayer:1,x:2.25,y:7.7,toX:3.15,toY:4.15,r:.58,curve:.8},
-  {id:"lab-ub1",type:"bumper",layer:1,x:4.4,y:5.2,r:.43},
-  {id:"lab-ub2",type:"bumper",layer:1,x:6.15,y:6.55,r:.42},
-  {id:"lab-ut",type:"target",layer:1,x:5.3,y:3.1,r:.27},
-  {id:"lab-down",type:"ramp",layer:1,toLayer:0,x:7.2,y:8.95,toX:7.35,toY:11.0,r:.7,curve:-.65}
+  {id:"b1",type:"bumper",layer:0,x:3.0,y:5.2,r:.48},
+  {id:"b2",type:"bumper",layer:0,x:5.25,y:3.85,r:.53},
+  {id:"b3",type:"bumper",layer:0,x:7.45,y:5.3,r:.48},
+  {id:"t1",type:"target",layer:0,x:2.05,y:9.8,r:.30},
+  {id:"t2",type:"target",layer:0,x:5.2,y:10.0,r:.30},
+  {id:"t3",type:"target",layer:0,x:8.1,y:9.5,r:.30},
+  {id:"w1",type:"wall",layer:0,x1:1.25,y1:11.7,x2:2.45,y2:12.35},
+  {id:"w2",type:"wall",layer:0,x1:9.0,y1:11.7,x2:7.8,y2:12.35},
+  {id:"up",type:"ramp",layer:0,toLayer:1,x:2.25,y:7.7,toX:3.15,toY:4.15,r:.58,curve:.8},
+  {id:"ub1",type:"bumper",layer:1,x:4.4,y:5.2,r:.43},
+  {id:"ub2",type:"bumper",layer:1,x:6.15,y:6.55,r:.42},
+  {id:"ut",type:"target",layer:1,x:5.3,y:3.1,r:.27},
+  {id:"down",type:"ramp",layer:1,toLayer:0,x:7.2,y:8.95,toX:7.35,toY:11.0,r:.7,curve:-.65}
 ];
 const breachParts=[
   {id:"btm-node1",type:"bumper",layer:0,x:2.65,y:4.15,r:.44},
