@@ -34,16 +34,16 @@ test("mission design roundtrips through validated existing table JSON",()=>{
   draft.title="A new table";
   draft.subtitle="A custom story";
   draft.quests=addQuest(draft.quests);
-  draft.quests=updateQuest(draft.quests,draft.quests[3].id,"label","Overload the core");
-  draft.quests=updateQuest(draft.quests,draft.quests[3].id,"kind","bumperHits");
+  draft.quests=updateQuest(draft.quests,draft.quests.at(-1).id,"label","Overload the core");
+  draft.quests=updateQuest(draft.quests,draft.quests.at(-1).id,"kind","bumperHits");
   draft.mode=updateMode(defaultMode(),"duration",27);
   const result=applyMissionDraft(source,draft);
   assert.equal(result.objects.length,source.objects.length);
-  assert.equal(result.quests[3].label,"Overload the core");
+  assert.equal(result.quests.at(-1).label,"Overload the core");
   assert.equal(result.mode.duration,27);
   assert.deepEqual(normalizeTable(JSON.parse(JSON.stringify(result))),result);
   const game=new PinballGame(result);
-  assert.equal(game.ledger.quests.length,4);
+  assert.equal(game.ledger.quests.length,source.quests.length+1);
   assert.equal(game.modeState.config.duration,27);
 });
 test("legacy tables without missions or special modes remain valid",()=>{
