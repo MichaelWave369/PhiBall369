@@ -79,6 +79,9 @@ function addBall(world,x,y) {
 export class PinballGame {
   constructor(table,onEvent=()=>{}) {this.onEvent=onEvent;this.setTable(table);}
   setTable(table) {
+    // Drop the previous scene before rebuilding; a body cannot be destroyed in a different world.
+    this.ball=null;
+    this.layer=0;
     this.table=table;
     this.pendingHits=[];
     this.scenes=[0,1].map(layer=>makeScene(layer,table,(l,d)=>this.pendingHits.push({layer:l,...d})));
