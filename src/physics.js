@@ -3,6 +3,7 @@ import {WIDTH,HEIGHT,BALL_RADIUS} from "./tables.js";
 import {newQuestLedger,recordQuestEvent} from "./quests.js";
 import {LOWER_RAILS,UPPER_RAILS,SLINGSHOTS,drainZoneAt,deadCornerAt} from "./geometry.js";
 import {makeRampTrack,sampleRamp} from "./rampGeometry.js";
+import {makeModeState,onModeEvent,expireMode,endActiveMode,modeActive} from "./modes.js";
 
 const V = pl.Vec2;
 const STEP = 1/120;
@@ -88,6 +89,7 @@ export class PinballGame {
     this.tiltMeter=0;this.tilted=false;
     this.accumulator=0;this.elapsed=0;this.lastRamp=-10;this.lastNudge=-10;
     this.upperTime=0;this.lastHit=new Map();this.ledger=newQuestLedger(this.table.quests);
+    this.modeState=makeModeState(this.table.mode);
     this.stuckSeconds=0;this.misfireSeconds=0;this.rescueCount=0;this.lastRescue=null;
     this.rampMotion=null;
     this.lastEffect=null;this.effectSequence=0;
@@ -154,6 +156,10 @@ export class PinballGame {
   }
   step(keys) {
     this.elapsed+=STEP;
+    if(expireMode(this.modeState,this.elapsed)){
+      this.fx("modeEnd");
+      this.onEvent("SPECIAL MODE COMPLETE · RECHARGE THE MACHINE");
+    }
     if(!this.tilted)this.tiltMeter=Math.max(0,this.tiltMeter-STEP*.06);
     if(this.rampMotion) {
       this.advanceOnRamp();
@@ -315,6 +321,18 @@ export class PinballGame {
     }
   }
   advanceQuest(kind) {
+    // Mode rewards apply to the underlying physical event; quest-completion
+    // bonuses remain independent. Activation hits never retroactively multiply.
+    const result=onModeEvent(this.modeState,kind,this.elapsed);
+    if(result.bonus>0){
+      this.score+=result.bonus;
+      this.fx("jackpot",{kind,bonus:result.bonus});
+      this.onEvent("SPECIAL JACKPOT · +"+result.bonus.toLocaleString());
+    }
+    if(result.activated){
+      this.fx("mode");
+      this.onEvent("MODE ACTIVE: "+this.modeState.config.label);
+    }
     for(const quest of recordQuestEvent(this.ledger,kind)) {
       this.score+=2000;
       this.fx("quest");
@@ -344,6 +362,7 @@ export class PinballGame {
     if(this.ball)this.scenes[this.layer].world.destroyBody(this.ball);
     this.ball=null;this.rampMotion=null;
     this.balls--;
+    endActiveMode(this.modeState);
     this.tiltMeter=0;this.tilted=false;this.charging=false;this.charge=0;
     this.stuckSeconds=0;this.misfireSeconds=0;this.rescueCount=0;
     if(this.balls===0) {

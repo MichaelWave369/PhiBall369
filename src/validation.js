@@ -5,6 +5,21 @@ const finite = (n,fallback,min,max) => typeof n === "number" && Number.isFinite(
 const safeText = (text,fallback,max=90) => typeof text === "string"
   ? text.replace(/[<>]/g,"").trim().slice(0,max) || fallback : fallback;
 const layer = value => value === 1 ? 1 : 0;
+const modeKinds=new Set(["bumperHits","targetHits","rampRuns"]);
+function normalizeMode(raw){
+  if(!raw||typeof raw!=="object"||Array.isArray(raw))return null;
+  if(!modeKinds.has(raw.triggerKind)||!modeKinds.has(raw.bonusKind))return null;
+  return {
+    id:safeText(raw.id,"custom-mode",48),
+    label:safeText(raw.label,"SPECIAL MODE",48),
+    description:safeText(raw.description,"Earn bonus points during special mode.",180),
+    triggerKind:raw.triggerKind,
+    bonusKind:raw.bonusKind,
+    threshold:Math.round(finite(raw.threshold,3,1,30)),
+    duration:finite(raw.duration,12,3,60),
+    multiplier:Math.round(finite(raw.multiplier,2,2,5))
+  };
+}
 
 export function normalizeTable(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Expected a table JSON object.");
@@ -50,6 +65,6 @@ export function normalizeTable(raw) {
     id:safeText(raw.id,"custom",40),title:safeText(raw.title,"CUSTOM TABLE",64),
     subtitle:safeText(raw.subtitle,"A PhiBall369 workshop creation.",150),
     accent:/^#[0-9a-fA-F]{6}$/.test(raw.accent) ? raw.accent : "#72edff",
-    objects,quests
+    objects,quests,mode:normalizeMode(raw.mode)
   };
 }

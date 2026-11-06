@@ -2,6 +2,7 @@ import {WIDTH,HEIGHT,BALL_RADIUS} from "./tables.js";
 import {LOWER_RAILS,UPPER_RAILS,SLINGSHOTS,DRAIN_ZONES} from "./geometry.js";
 import {drawSprite} from "./sprites.js";
 import {makeRampTrack,DECK_Z} from "./rampGeometry.js";
+import {modeActive,modeRemaining} from "./modes.js";
 
 const SCALE=50;
 const PI=Math.PI;
@@ -25,6 +26,47 @@ function chromeRail(ctx,x1,y1,x2,y2,accent=false){
   line(ctx,x1,y1,x2,y2,accent?"#7fdcf8":"#92acbc",.105);
   line(ctx,x1-.013,y1-.015,x2-.013,y2-.015,"#e9f7ff",.028);
 }
+function signatureArtwork(ctx,table){
+  // Original table-specific screen printing. No collision surfaces or copied art.
+  ctx.save();
+  ctx.globalAlpha=.29;
+  ctx.lineWidth=.045;ctx.strokeStyle=table.accent;ctx.fillStyle=table.accent;
+  if(table.id==="lab"){
+    for(const r of [1.2,1.85,2.5]){
+      ctx.beginPath();ctx.arc(5.25,6.9,r,0,Math.PI*2);ctx.stroke();
+    }
+    for(const [x,y] of [[2,7.7],[8.5,7.7],[5.25,3.1]]){
+      circle(ctx,x,y,.13,table.accent);
+      line(ctx,x,y,5.25,6.9,table.accent,.02);
+    }
+    ctx.font="bold .26px monospace";ctx.textAlign="center";
+    ctx.fillText("LAB / 369",5.25,7);
+  }else if(table.id==="btm"){
+    ctx.setLineDash([.15,.20]);
+    for(let i=0;i<5;i++){
+      const yy=3+i*1.6;
+      line(ctx,1.3,yy,4.1,yy,table.accent,.06);
+      line(ctx,6.4,yy,9.0,yy,table.accent,.06);
+    }
+    ctx.setLineDash([]);
+    for(let i=0;i<6;i++){
+      const x=2+i*1.25;
+      ctx.strokeRect(x,7.0,.45,.45);
+    }
+    ctx.textAlign="center";ctx.font="bold .24px monospace";
+    ctx.fillText("SECURITY GRID / 04",5.25,8.15);
+  }else if(table.id==="arclight"){
+    ctx.beginPath();ctx.ellipse(5.3,5.1,3.1,1.85,-.25,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.ellipse(5.3,5.1,2.1,1.12,-.25,0,Math.PI*2);ctx.stroke();
+    for(const a of [0,Math.PI*.67,Math.PI*1.33]){
+      const x=5.3+3*Math.cos(a),y=5.1+1.65*Math.sin(a);
+      circle(ctx,x,y,.12,table.accent);
+    }
+    ctx.font="bold .25px monospace";ctx.textAlign="center";
+    ctx.fillText("REACTOR · DECK 33",5.2,7.35);
+  }
+  ctx.restore();
+}
 function background(ctx,table,game){
   const sky=ctx.createLinearGradient(0,0,WIDTH,HEIGHT);
   sky.addColorStop(0,"#203554");sky.addColorStop(.43,"#102138");
@@ -36,6 +78,7 @@ function background(ctx,table,game){
   ctx.strokeStyle="#80b5ea12";ctx.lineWidth=.014;
   for(let i=1;i<21;i++){line(ctx,i*.5,0,i*.5,HEIGHT,"#8ab8dc10",.014);}
   for(let i=1;i<35;i++){line(ctx,0,i*.5,WIDTH,i*.5,"#8ab8dc10",.014);}
+  signatureArtwork(ctx,table);
   // Screen-printed original playfield details, separate from mechanical parts.
   ctx.save();ctx.globalAlpha=.18;
   ctx.strokeStyle=table.accent;ctx.lineWidth=.038;
@@ -81,6 +124,14 @@ function background(ctx,table,game){
   ctx.strokeRect(.26,.30,9.98,16.85);
   if(game.tilted){
     ctx.fillStyle="#ff4a5f1a";ctx.fillRect(0,0,WIDTH,HEIGHT);
+  }
+  if(modeActive(game.modeState,game.elapsed)){
+    const alpha=.13+.07*(1+Math.sin(game.elapsed*11))*.5;
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=table.accent;ctx.lineWidth=.17;
+    ctx.strokeRect(.24,.32,10.0,16.80);
+    ctx.restore();
   }
 }
 function rails(ctx){
@@ -253,6 +304,17 @@ function ball(ctx,game){
   }
 }
 
+function modeBanner(ctx,game,table){
+  if(!modeActive(game.modeState,game.elapsed))return;
+  const remaining=modeRemaining(game.modeState,game.elapsed);
+  ctx.save();ctx.textAlign="center";
+  ctx.fillStyle="#051b31de";ctx.fillRect(2.65,12.20,5.25,.62);
+  ctx.strokeStyle=table.accent;ctx.lineWidth=.035;
+  ctx.strokeRect(2.65,12.20,5.25,.62);
+  ctx.fillStyle="#f0fcff";ctx.font="bold .26px monospace";
+  ctx.fillText(game.modeState.config.label+" · "+remaining.toFixed(1)+"s",5.25,12.60,4.95);
+  ctx.restore();
+}
 function diagnostic(ctx,game){
   ctx.save();
   for(const zone of DRAIN_ZONES){
@@ -300,6 +362,7 @@ export function drawPinball(ctx,game,table,editor=false,editLayer=0,pending=null
     flippers(ctx,game);
     pieces(ctx,table,1,game,game.layer===1?1:.26);
     shooter(ctx,game);ball(ctx,game);
+    modeBanner(ctx,game,table);
   }
   if(debug)diagnostic(ctx,game);
   ctx.restore();
