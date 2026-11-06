@@ -5,6 +5,8 @@ import {normalizeTable} from "./validation.js";
 import {drawPinball} from "./render.js";
 import {ArcadeAudio,SOUND_THEMES} from "./audio.js";
 import {modeActive,modeRemaining} from "./modes.js";
+import MissionDesigner from "./MissionDesigner.jsx";
+import {applyMissionDraft} from "./workshop.js";
 
 const STORAGE="phiball369-table-v1";
 const emptyControl={left:false,right:false};
@@ -126,6 +128,7 @@ export default function App() {
   const game=gameRef.current;
   const [hud,setHud]=useState(()=>snapshot(game));
   const [editor,setEditor]=useState(false);
+  const [builderTab,setBuilderTab]=useState("parts");
   const editorRef=useRef(false);
   const [debug,setDebug]=useState(false);
   const debugRef=useRef(false);
@@ -163,7 +166,7 @@ export default function App() {
   }
   function loadMachine(next,selection) {
     audioRef.current.setTheme(next.id);
-    pendingRef.current=setPending(null);history.current=[];
+    pendingRef.current=null;setPending(null);history.current=[];
     selectedRampIdRef.current=null;setSelectedRampId(null);
     tableRef.current=next;setTable(next);
     setActivePreset(selection);game.setTable(next);
@@ -203,6 +206,27 @@ export default function App() {
       storeCustom({...old,objects:old.objects.map(o=>
         o.id===selectedRampIdRef.current?{...o,curve:curvature}:o)});
       setAnnouncement("RAMP CURVE UPDATED");
+    }
+  }
+  function saveMissionDesign(draft,play=false) {
+    try {
+      const updated=applyMissionDraft(tableRef.current,draft);
+      const saved=storeCustom(updated);
+      if(play) {
+        game.setTable(saved);
+        editorRef.current=false;
+        setEditor(false);
+        setBuilderTab("parts");
+        pendingRef.current=null;setPending(null);
+        setAnnouncement("MISSION SAVED · READY FOR PLAYTEST");
+        refresh();
+      }else {
+        setAnnouncement("MISSION SAVED · EXPORT JSON TO SHARE");
+      }
+      return true;
+    }catch(error) {
+      setAnnouncement("MISSION SAVE FAILED · "+error.message);
+      return false;
     }
   }
   function toggleEditor() {
@@ -358,7 +382,7 @@ export default function App() {
           <small>THE PHYSICS ARCADE</small></div>
       </div>
       <div className="header-right"><span className="live-dot"></span> LIVE REACT ARCADE
-        <span className="version">RUNG 07 · SIGNATURE MACHINES</span>
+        <span className="version">RUNG 08 · MISSION WORKSHOP</span>
         <a href="https://github.com/MichaelWave369/PhiBall369" target="_blank" rel="noopener noreferrer">GITHUB</a>
       </div>
     </header>
@@ -452,7 +476,7 @@ export default function App() {
         {audioError&&<p className="tiny" role="alert">{audioError}</p>}
         <div className="divider"></div>
         <div className="section-title">THE WORKSHOP <span className="line"></span></div>
-        <p className="muted">Build tables with parts that affect the actual physics simulation.</p>
+        <p className="muted">Create table hardware, quests and timed mission modes without writing code.</p>
         <label className="debug-option"><input type="checkbox" checked={debug}
           onChange={event=>{const active=event.target.checked;setDebug(active);debugRef.current=active;}}/>
           SHOW PHYSICS DEBUG OVERLAY</label>
@@ -460,6 +484,21 @@ export default function App() {
           {editor?"PLAY THIS TABLE":"ENTER BUILD MODE"}</button>
         {editor&&<div className="builder">
           <div className="divider"></div>
+          <div className="two-buttons builder-tabs" role="tablist" aria-label="Workshop editing tools">
+            <button role="tab" aria-selected={builderTab==="parts"}
+              className={builderTab==="parts"?"selected":""}
+              onClick={()=>setBuilderTab("parts")}>TABLE PARTS</button>
+            <button role="tab" aria-selected={builderTab==="missions"}
+              className={builderTab==="missions"?"selected":""}
+              onClick={()=>{pendingRef.current=null;setPending(null);setBuilderTab("missions");}}>
+              QUESTS &amp; MODES
+            </button>
+          </div>
+          {builderTab==="missions"?
+            <MissionDesigner table={table}
+              onSave={draft=>saveMissionDesign(draft,false)}
+              onPlay={draft=>saveMissionDesign(draft,true)}/>
+            :<div className="parts-editor">
           <label>EDIT PLAYFIELD</label>
           <div className="two-buttons layer-buttons">
             <button className={editLayer===0?"selected":""} onClick={()=>switchLayer(0)}>LOWER · L1</button>
@@ -495,7 +534,8 @@ export default function App() {
           <label htmlFor="import-table" className="file-label">IMPORT TABLE JSON</label>
           <input id="import-table" type="file" ref={fileInput}
             accept=".json,application/json" onChange={importFile}/>
-          <p className="tiny">Custom tables save locally. Exports contain sanitized table data, not executable scripts.</p>
+          <p className="tiny">Custom tables save locally. Exports contain sanitized table data, quests and bonus modes, not executable scripts.</p>
+          </div>}
         </div>}
         <div className="divider"></div>
         <div className="section-title">ENGINE STATUS <span className="line"></span></div>
@@ -512,7 +552,7 @@ export default function App() {
           <div><b>03</b><span>ARCLIGHT</span><small>STARSHIP RAMP RUN</small></div>
         </div>
         <div className="divider"></div>
-        <p className="field-footnote">Three independent physical layouts and timed signature scoring modes. Imported custom tables retain an optional validated mode configuration. Full free-body 3D collision remains future work.</p>
+        <p className="field-footnote">Build eight original quests and your own timed bonus mode using the Mission Workshop. Save locally or export a safe, shareable JSON table. Fully free-body 3D collision remains future work.</p>
       </aside>
     </main>
   </>;

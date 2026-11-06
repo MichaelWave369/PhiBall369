@@ -54,13 +54,24 @@ export function normalizeTable(raw) {
     }
   }
   const kinds = new Set(["bumperHits","targetHits","rampRuns"]);
+  // Imported mission IDs must be unique: the quest ledger indexes completion
+  // by ID, so duplicates could otherwise make several quests complete at once.
+  const missionIds=new Set();
   const quests = (Array.isArray(raw.quests) ? raw.quests : []).slice(0,8)
     .filter(q=>q && kinds.has(q.kind))
-    .map((q,i)=>({
-      id:safeText(q.id,"quest-"+i,40),
-      label:safeText(q.label,"Complete quest "+(i+1),95),
-      kind:q.kind,goal:Math.round(finite(q.goal,3,1,99))
-    }));
+    .map((q,i)=>{
+      const requested=safeText(q.id,"quest-"+i,40);
+      let id=requested,suffix=2;
+      while(missionIds.has(id)){
+        const trail="-"+suffix++;
+        id=requested.slice(0,40-trail.length)+trail;
+      }
+      missionIds.add(id);
+      return {
+        id,label:safeText(q.label,"Complete quest "+(i+1),95),
+        kind:q.kind,goal:Math.round(finite(q.goal,3,1,99))
+      };
+    });
   return {
     id:safeText(raw.id,"custom",40),title:safeText(raw.title,"CUSTOM TABLE",64),
     subtitle:safeText(raw.subtitle,"A PhiBall369 workshop creation.",150),
