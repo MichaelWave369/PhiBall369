@@ -48,7 +48,7 @@ function snapshot(game) {
       activations:game.modeState.activations
     }:null,
     quests:game.ledger.quests.map(q=>({
-      ...q,...questStatus(game.ledger,q)
+      ...q,...questStatus(game.ledger,q,game.elapsed)
     }))
   };
 }
@@ -382,7 +382,7 @@ export default function App() {
           <small>THE PHYSICS ARCADE</small></div>
       </div>
       <div className="header-right"><span className="live-dot"></span> LIVE REACT ARCADE
-        <span className="version">RUNG 09 · SECRET SEQUENCES</span>
+        <span className="version">RUNG 10 · MISSION CHALLENGES</span>
         <a href="https://github.com/MichaelWave369/PhiBall369" target="_blank" rel="noopener noreferrer">GITHUB</a>
       </div>
     </header>
@@ -429,6 +429,13 @@ export default function App() {
               {q.completed?"SEQUENCE COMPLETE":"STAGE "+(q.stageIndex+1)+"/"+q.stageCount+
                 " · "+(q.partId??"ANY")+" · "+q.kind}
             </small>}
+            {q.staged&&(q.timed||q.rewardPoints!==2000||q.extraBall||q.failures>0)&&
+              <small className={"mission-stage-note"+(q.running?" mission-clock":"")}>
+                {q.timed?(q.running?"TIME LEFT "+Math.ceil(q.remaining)+"s":"LIMIT "+q.remaining+"s"):"NO TIMER"}
+                {" · REWARD +"+q.rewardPoints.toLocaleString()}
+                {q.extraBall?" · EXTRA BALL":""}
+                {q.failures?" · RESETS "+q.failures:""}
+              </small>}
           </span>
           <b>{q.count} / {q.goal}</b>
         </div>)}</div>
@@ -558,7 +565,7 @@ export default function App() {
           <div><b>03</b><span>ARCLIGHT</span><small>STARSHIP RAMP RUN</small></div>
         </div>
         <div className="divider"></div>
-        <p className="field-footnote">Quest sequences now support exact physical part IDs and up to six ordered stages. Only the current stage can advance. Imported missions remain declarative and script-free.</p>
+        <p className="field-footnote">Timed secret missions, wrong-target resets and extra-ball or score rewards can now be designed in the Quest Workshop. Previous classic tables remain compatible.</p>
       </aside>
     </main>
   </>;

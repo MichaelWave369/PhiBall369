@@ -91,3 +91,5 @@
 .mission-stage-note{display:block;font-size:9px;color:#7fcbdf;line-height:1.6;margin:4px 0 0;
   font-weight:500;overflow-wrap:anywhere}
 .mission.complete .mission-stage-note{color:#a7eccf}
+
+.mission-clock{color:#ffd08a!important}

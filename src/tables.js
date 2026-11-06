@@ -85,7 +85,9 @@ const btm={
     {id:"btm-sentries",label:"Disable four sentries",kind:"targetHits",goal:4},
     {id:"btm-access",label:"Infiltrate upper sector",kind:"rampRuns",goal:1},
     {id:"btm-secret",label:"Secret: breach three sentries in sequence",
-      kind:"targetHits",goal:3,stages:[
+      kind:"targetHits",goal:3,
+      challenge:{seconds:45,wrongHit:"reset",points:5000,extraBall:true},
+      stages:[
         {kind:"targetHits",partId:"btm-sentry1",goal:1},
         {kind:"targetHits",partId:"btm-sentry3",goal:1},
         {kind:"targetHits",partId:"btm-upper-sentry1",goal:1}
@@ -107,7 +109,9 @@ const arclight={
     {id:"arc-decks",label:"Traverse the upper deck twice",kind:"rampRuns",goal:2},
     {id:"arc-beacons",label:"Activate navigation beacons",kind:"targetHits",goal:5},
     {id:"arc-sequence",label:"Secret: starship navigation protocol",
-      kind:"targetHits",goal:2,stages:[
+      kind:"targetHits",goal:2,
+      challenge:{seconds:55,wrongHit:"ignore",points:7500,extraBall:false},
+      stages:[
         {kind:"targetHits",partId:"arc-beacon1",goal:1},
         {kind:"targetHits",partId:"arc-beacon4",goal:1},
         {kind:"rampRuns",partId:"arc-up",goal:1}
