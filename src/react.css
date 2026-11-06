@@ -1,0 +1,15 @@
+#root{min-height:100vh}
+.react-note{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:0 0 13px;font-size:10px;letter-spacing:.04em;color:#8ba8ca}
+.react-note strong{color:#81dfbe;font-size:10px;font-weight:500}
+.reactor-tag{display:inline-block;border:1px solid #375574;border-radius:20px;padding:5px 8px;color:#b9d5f0}
+.masthead .react-brand{display:flex;gap:14px;align-items:center}
+.field-footnote{font-size:10px;line-height:1.75;color:#7f9fbd}
+.tab-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);margin-right:7px}
+.editor-tip{font-size:10px;padding:10px 12px;border-left:2px solid var(--accent);background:#101d37;margin-top:12px;line-height:1.7;color:#c1dcf2}
+.header-right a{color:#a9d8f1;text-decoration:none}
+.header-right a:hover{color:white}
+.machine-info h1{overflow-wrap:anywhere}
+.mission span{line-height:1.4}
+.announcement{overflow-wrap:anywhere}
+.drag-area{user-select:none;-webkit-user-select:none}
+@media(max-width:750px){.react-note{margin-top:8px}.masthead{gap:12px}.touch-controls{position:sticky;bottom:0;z-index:5;padding:6px;background:#090f21ed}.left-panel{grid-row:2}.right-panel{grid-row:3}}
