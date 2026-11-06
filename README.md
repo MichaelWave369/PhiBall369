@@ -1,6 +1,11 @@
 # ΦBALL 369
 
-**Browser-first pinball physics engine and two-level table workshop.**
+**Browser-first React pinball physics engine and two-level table workshop.**
+
+### Chrome Edition: physics and visual upgrade
+
+The next rung adds open outlane drains, stalled-ball recovery, Planck polygon slingshots, stronger bumper kicks, original chrome SVG part sprites, and a switchable physics debug overlay. The physics and renderer share [collision geometry](src/geometry.js) so visual rails agree with real solver shapes. For the detailed design, limitations, asset sourcing, and manual test plan, see [Chrome Edition](docs/CHROME_EDITION.md).
+
 
 PhiBall369 starts as a playable desktop/mobile browser pinball game. No VR stack is required. This is the first rung of a larger open-source table engine.
 
