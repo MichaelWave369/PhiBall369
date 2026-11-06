@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080b1c" />
+  <meta name="description" content="PhiBall369: open-source browser pinball and two-level table workshop." />
+  <title>PhiBall369 | The Physics Arcade</title>
+</head>
+<body>
+  <div id="app">
+    <header class="masthead">
+      <div class="wordmark"><span class="phi">Φ</span> BALL <span class="mark">369</span><small>THE PHYSICS ARCADE</small></div>
+      <div class="header-right"><span class="live-dot"></span> BROWSER ENGINE <span class="version">RUNG 01 · ALPHA</span></div>
+    </header>
+    <main class="workspace">
+      <aside class="panel left-panel">
+        <div class="section-title">THE ARCADE <span class="line"></span></div>
+        <label for="preset">SELECT A MACHINE</label>
+        <select id="preset"></select>
+        <div class="machine-info"><h1 id="machine-title">PHIBALL LAB</h1><p id="machine-subtitle">A laboratory of velocity and glorious bad decisions.</p></div>
+        <div class="divider"></div>
+        <div class="section-title">PLAYER ONE <span class="line"></span></div>
+        <div class="stat-line"><span>SCORE</span><strong id="score">0000000</strong></div>
+        <div class="stat-line"><span>BALLS LEFT</span><strong id="balls">03</strong></div>
+        <div class="stat-line"><span>PLAYFIELD</span><strong id="live-layer">LOWER · L1</strong></div>
+        <div class="section-title spaced">MISSION LEDGER <span class="line"></span></div>
+        <div id="missions" class="missions"></div>
+        <div id="announcement" class="announcement" aria-live="polite">READY FOR LAUNCH</div>
+        <div class="divider"></div>
+        <button id="launch" class="primary">LAUNCH BALL <span>SPACE</span></button>
+        <div class="two-buttons"><button id="pause">PAUSE</button><button id="restart">RESTART</button></div>
+        <div class="control-help">
+          <b>CONTROLS</b><br>
+          <span>← / A</span> LEFT FLIPPER<br>
+          <span>→ / D</span> RIGHT FLIPPER<br>
+          <span>SPACE</span> LAUNCH BALL<br>
+          <span>N</span> NUDGE THE TABLE
+        </div>
+      </aside>
+      <section class="playfield-column">
+        <div class="cabinet-header"><span>PHIBALL / PLAYFIELD</span><span id="play-state">● READY</span></div>
+        <div class="cabinet"><canvas id="table" width="525" height="875" aria-label="Playable PhiBall pinball table"></canvas></div>
+        <div class="touch-controls"><button id="left-flip" aria-label="Hold left flipper">◀ LEFT FLIPPER</button><button id="touch-launch">LAUNCH</button><button id="right-flip" aria-label="Hold right flipper">RIGHT FLIPPER ▶</button></div>
+        <p class="footer-note">FIXED-STEP RIGID-BODY PHYSICS · TWO PLAYFIELD LAYERS · ORIGINAL ARTWORK</p>
+      </section>
+      <aside class="panel right-panel">
+        <div class="section-title">THE WORKSHOP <span class="line"></span></div>
+        <p class="muted">A real playable table builder, not a screenshot factory.</p>
+        <button id="toggle-edit" class="editor-toggle">ENTER BUILD MODE</button>
+        <div id="builder" class="builder hidden">
+          <div class="divider"></div>
+          <label>EDIT PLAYFIELD</label>
+          <div class="two-buttons layer-buttons"><button id="layer0" class="selected">LOWER · L1</button><button id="layer1">UPPER · L2</button></div>
+          <label for="tool">PLACE A PART</label>
+          <select id="tool">
+            <option value="bumper">Pop bumper</option>
+            <option value="target">Standing target</option>
+            <option value="wall">Rail / wall (two clicks)</option>
+            <option value="ramp">Layer ramp (two clicks)</option>
+            <option value="erase">Erase object</option>
+          </select>
+          <p class="tool-note" id="builder-hint">Click the playfield to place a bumper.</p>
+          <div class="two-buttons"><button id="undo">UNDO</button><button id="clear">CLEAR PARTS</button></div>
+          <button id="export-table">EXPORT TABLE JSON</button>
+          <label for="import-table" class="file-label">IMPORT TABLE JSON</label>
+          <input id="import-table" type="file" accept=".json,application/json" />
+          <p class="tiny">Import validates dimensions, supported parts and limits. Tables are kept in your browser, not uploaded to a server.</p>
+        </div>
+        <div class="divider"></div>
+        <div class="section-title">ENGINE STATUS <span class="line"></span></div>
+        <div class="engine-status"><span>PHYSICS</span><strong>PLANCK · BOX2D</strong></div>
+        <div class="engine-status"><span>SIMULATION</span><strong>120 HZ</strong></div>
+        <div class="engine-status"><span>ELEVATION</span><strong>2 LAYERS</strong></div>
+        <div class="engine-status"><span>QUEST RULES</span><strong>DATA-DRIVEN</strong></div>
+        <div class="divider"></div>
+        <div class="section-title">PHI369 UNIVERSE <span class="line"></span></div>
+        <div class="roadmap">
+          <div><b>01</b><span>PHIBALL LAB</span><small>ORIGINAL STARTER TABLE</small></div>
+          <div><b>02</b><span>BREAK THE MATRIX</span><small>SYSTEM BREACH QUESTS</small></div>
+          <div><b>03</b><span>ARCLIGHT</span><small>STARSHIP RAMP RUN</small></div>
+        </div>
+      </aside>
+    </main>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
