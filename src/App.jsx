@@ -10,7 +10,8 @@ const help={
   bumper:"Click anywhere inside the field to place a pop bumper.",
   target:"Click a position to add a scoring target.",
   wall:"Click the rail start, then click its endpoint.",
-  ramp:"Click the entrance, then click the exit on the other deck.",
+  ramp:"Click the entrance, then click the exit on the other deck. Set curvature below.",
+  "shape-ramp":"Click the entrance of an existing ramp, then adjust its curvature.",
   erase:"Click a placed part to remove it."
 };
 function loadTable() {
@@ -26,6 +27,10 @@ function snapshot(game) {
     status:game.status,paused:game.paused,
     charge:game.charge,charging:game.charging,
     tiltMeter:game.tiltMeter,tilted:game.tilted,
+    height:game.rampMotion?.point.z??(game.layer===1?1.35:0),
+    ramping:!!game.rampMotion,
+    rampProgress:game.rampMotion?
+      Math.round(100*game.rampMotion.distance/game.rampMotion.track.totalLength):0,
     quests:game.ledger.quests.map(q=>({
       ...q,count:Math.min(q.goal,game.ledger.counts[q.kind]||0),
       completed:game.ledger.completed.includes(q.id)
@@ -102,6 +107,10 @@ export default function App() {
   const layerRef=useRef(0);
   const [tool,setTool]=useState("bumper");
   const toolRef=useRef("bumper");
+  const [rampCurve,setRampCurve]=useState(.4);
+  const rampCurveRef=useRef(.4);
+  const [selectedRampId,setSelectedRampId]=useState(null);
+  const selectedRampIdRef=useRef(null);
   const [pending,setPending]=useState(null);
   const pendingRef=useRef(null);
   const canvasRef=useRef(null);
@@ -112,6 +121,7 @@ export default function App() {
   function refresh() {setHud(snapshot(gameRef.current));}
   function loadMachine(next,selection) {
     pendingRef.current=null;setPending(null);history.current=[];
+    selectedRampIdRef.current=null;setSelectedRampId(null);
     tableRef.current=next;setTable(next);
     setActivePreset(selection);game.setTable(next);
     setAnnouncement("READY FOR LAUNCH");refresh();
@@ -137,6 +147,20 @@ export default function App() {
     layerRef.current=next;setEditLayer(next);
     if(clearPending){pendingRef.current=null;setPending(null);}
   }
+  function changeRampCurve(value) {
+    const curvature=Math.max(-1.5,Math.min(1.5,Number(value)||0));
+    rampCurveRef.current=curvature;setRampCurve(curvature);
+    if(toolRef.current==="shape-ramp" && selectedRampIdRef.current) {
+      const old=tableRef.current;
+      const part=old.objects.find(o=>o.id===selectedRampIdRef.current&&o.type==="ramp");
+      if(!part)return;
+      history.current.push(copyTable(old.objects));
+      if(history.current.length>40)history.current.shift();
+      storeCustom({...old,objects:old.objects.map(o=>
+        o.id===selectedRampIdRef.current?{...o,curve:curvature}:o)});
+      setAnnouncement("RAMP CURVE UPDATED");
+    }
+  }
   function toggleEditor() {
     const next=!editorRef.current;
     editorRef.current=next;setEditor(next);
@@ -154,6 +178,20 @@ export default function App() {
     const type=toolRef.current,layer=layerRef.current;
     const old=tableRef.current;
     const parts=copyTable(old.objects);
+    if(type==="shape-ramp") {
+      let nearest=null,distance=Infinity;
+      for(const part of parts){
+        if(part.type!=="ramp"||part.layer!==layer)continue;
+        const d=Math.hypot(x-part.x,y-part.y);
+        if(d<distance){nearest=part;distance=d;}
+      }
+      if(!nearest||distance>1.1){setAnnouncement("SELECT A RAMP ENTRY ON THIS DECK");return;}
+      selectedRampIdRef.current=nearest.id;setSelectedRampId(nearest.id);
+      const curve=nearest.curve??.4;
+      rampCurveRef.current=curve;setRampCurve(curve);
+      setAnnouncement("SELECTED RAMP · ADJUST CURVATURE SLIDER");
+      return;
+    }
     if(type==="erase") {
       const index=parts.findIndex(p=>p.layer===layer &&
         (p.type==="wall"?lineDistance(x,y,p.x1,p.y1,p.x2,p.y2)<.40:
@@ -177,8 +215,12 @@ export default function App() {
       history.current.push(copyTable(old.objects));
       if(type==="wall")parts.push({id:makeId(),type,layer,
         x1:start.x,y1:start.y,x2:x,y2:y});
-      else if(type==="ramp")parts.push({id:makeId(),type,layer:start.layer,
-        toLayer:layer,x:start.x,y:start.y,toX:x,toY:y,r:.60});
+      else if(type==="ramp"){
+        const id=makeId();
+        parts.push({id,type,layer:start.layer,
+          toLayer:layer,x:start.x,y:start.y,toX:x,toY:y,r:.60,curve:rampCurveRef.current});
+        selectedRampIdRef.current=id;setSelectedRampId(id);
+      }
       else parts.push({id:makeId(),type,layer,x,y,r:type==="bumper"?.44:.3});
       if(start?.type==="ramp")switchLayer(start.layer,false);
       pendingRef.current=null;setPending(null);
@@ -270,7 +312,7 @@ export default function App() {
           <small>THE PHYSICS ARCADE</small></div>
       </div>
       <div className="header-right"><span className="live-dot"></span> LIVE REACT ARCADE
-        <span className="version">RUNG 04 · CHROME EDITION</span>
+        <span className="version">RUNG 05 · ELEVATION</span>
         <a href="https://github.com/MichaelWave369/PhiBall369" target="_blank" rel="noopener noreferrer">GITHUB</a>
       </div>
     </header>
@@ -291,7 +333,8 @@ export default function App() {
         <div className="stat-line"><span>BALLS LEFT</span><strong>{String(hud.balls).padStart(2,"0")}</strong></div>
         <div className="stat-line"><span>PLAYFIELD</span><strong>{editor?
           (editLayer===0?"EDIT LOWER · L1":"EDIT UPPER · L2"):
-          (hud.layer===0?"LOWER · L1":"UPPER · L2")}</strong></div>
+          (hud.ramping?"RAMP "+hud.rampProgress+"% · Z "+hud.height.toFixed(2):
+            hud.layer===0?"LOWER · L1":"UPPER · L2")}</strong></div>
         <div className="section-title spaced">PLUNGER + TILT <span className="line"></span></div>
         <div className="gauge-label"><span>SPRING CHARGE</span><strong>{Math.round(hud.charge*100)}%</strong></div>
         <div className="gauge"><div className="gauge-fill" style={{width:(hud.charge*100)+"%"}} /></div>
@@ -330,7 +373,7 @@ export default function App() {
         </div>
         <div className="nudge-touch"><button disabled={editor||hud.status!=="playing"||hud.tilted}
           onClick={()=>{game.nudge();refresh();}}>NUDGE · TILT WARNING</button></div>
-        <p className="footer-note">CHROME SPRITES · REAL SLING IMPULSES · TRAP WATCHDOG · TWO LAYERS</p>
+        <p className="footer-note">CHROME SPRITES · CONTINUOUS-HEIGHT SPLINE RAMPS · TWO PLANCK DECKS</p>
       </section>
       <aside className="panel right-panel">
         <div className="section-title">THE WORKSHOP <span className="line"></span></div>
@@ -351,11 +394,24 @@ export default function App() {
           <select id="tool" value={tool} onChange={event=>{
             const next=event.target.value;toolRef.current=next;setTool(next);
             pendingRef.current=null;setPending(null);
+            selectedRampIdRef.current=null;setSelectedRampId(null);
           }}>
             <option value="bumper">Pop bumper</option><option value="target">Standing target</option>
             <option value="wall">Rail / wall (two clicks)</option>
-            <option value="ramp">Layer ramp (two clicks)</option><option value="erase">Erase a part</option>
+            <option value="ramp">Curved ramp (two clicks)</option>
+            <option value="shape-ramp">Shape existing ramp</option>
+            <option value="erase">Erase a part</option>
           </select>
+          {(tool==="ramp"||tool==="shape-ramp")&&
+            <div className="ramp-shaper">
+              <label htmlFor="curve">RAMP CURVATURE · {rampCurve.toFixed(2)}</label>
+              <input id="curve" type="range" min="-1.5" max="1.5" step="0.05"
+                value={rampCurve} onChange={event=>changeRampCurve(event.target.value)}/>
+              <p className="tiny">{tool==="shape-ramp"?
+                (selectedRampId?"Ramp selected · slider edits existing track":"Click a ramp entrance to select its path"):
+                "This curvature applies to the next ramp you draw."}
+                {" "}Elevation transitions smoothly between deck heights.</p>
+            </div>}
           <p className="editor-tip">{pending?pending.type==="ramp"?
             "Now click the destination on the opposite deck.":"Now click the rail endpoint.":help[tool]}</p>
           <div className="two-buttons"><button onClick={undo} disabled={!history.current.length}>UNDO</button>
@@ -381,7 +437,7 @@ export default function App() {
           <div><b>03</b><span>ARCLIGHT</span><small>STARSHIP RAMP RUN</small></div>
         </div>
         <div className="divider"></div>
-        <p className="field-footnote">Original chrome sprites, physical sling kickers, collision-aligned rails and drain-zone watchdog enabled. Continuous 3D ramps and calibrated spin are future rungs.</p>
+        <p className="field-footnote">Curved 2.5D ramps now guide the ball continuously through elevation changes. Fully free-moving 3D ball collision and calibrated spin remain future work.</p>
       </aside>
     </main>
   </>;

@@ -2,6 +2,7 @@ import * as pl from "planck";
 import {WIDTH,HEIGHT,BALL_RADIUS} from "./tables.js";
 import {newQuestLedger,recordQuestEvent} from "./quests.js";
 import {LOWER_RAILS,UPPER_RAILS,SLINGSHOTS,drainZoneAt,deadCornerAt} from "./geometry.js";
+import {makeRampTrack,sampleRamp} from "./rampGeometry.js";
 
 const V = pl.Vec2;
 const STEP = 1/120;
@@ -88,6 +89,7 @@ export class PinballGame {
     this.accumulator=0;this.elapsed=0;this.lastRamp=-10;this.lastNudge=-10;
     this.upperTime=0;this.lastHit=new Map();this.ledger=newQuestLedger(this.table.quests);
     this.stuckSeconds=0;this.misfireSeconds=0;this.rescueCount=0;this.lastRescue=null;
+    this.rampMotion=null;
     this.ball=addBall(this.scenes[0].world,9.7,15.85);
     this.pendingHits.length=0;
   }
@@ -115,7 +117,7 @@ export class PinballGame {
   }
   togglePause() { if (this.status==="playing") this.paused=!this.paused;return this.paused; }
   nudge() {
-    if (this.status!=="playing"||this.paused||this.tilted||this.elapsed-this.lastNudge<.45) return false;
+    if (this.status!=="playing"||this.paused||this.tilted||!this.ball||this.elapsed-this.lastNudge<.45) return false;
     this.lastNudge=this.elapsed;
     this.tiltMeter=clamp(this.tiltMeter+.40,0,1);
     this.ball.applyLinearImpulse(V(-.35,-.95),this.ball.getWorldCenter(),true);
@@ -142,6 +144,10 @@ export class PinballGame {
   step(keys) {
     this.elapsed+=STEP;
     if(!this.tilted)this.tiltMeter=Math.max(0,this.tiltMeter-STEP*.06);
+    if(this.rampMotion) {
+      this.advanceOnRamp();
+      return;
+    }
     const scene=this.scenes[this.layer];
     for(const f of this.scenes[0].flippers) {
       const on=!this.tilted&&(f.left?keys.left:keys.right);
@@ -166,7 +172,7 @@ export class PinballGame {
         o.type==="ramp"&&o.layer===this.layer &&
         Math.hypot(p.x-o.x,p.y-o.y)<o.r+BALL_RADIUS);
       if(ramp) {
-        this.transfer(ramp);
+        this.enterRamp(ramp);
         return;
       }
     }
@@ -177,6 +183,69 @@ export class PinballGame {
       this.transfer({toLayer:0,toX:7.6,toY:11.0});
       this.onEvent("UPPER DECK RECOVERY CHUTE");
     }
+  }
+  enterRamp(ramp) {
+    if(this.rampMotion||!this.ball||this.status!=="playing")return false;
+    const p=this.ball.getPosition(),v=this.ball.getLinearVelocity();
+    const track=makeRampTrack(ramp,{x:p.x,y:p.y});
+    // Every ramp entrance has a mechanical assist so ordinary flipper shots
+    // can ascend; thereafter travel speed follows grade and friction.
+    const entrySpeed=clamp(Math.max(8.2,v.length()+1.25),8.2,25);
+    this.scenes[this.layer].world.destroyBody(this.ball);
+    this.ball=null;
+    this.rampMotion={
+      track,sourceLayer:this.layer,distance:0,speed:entrySpeed,
+      point:sampleRamp(track,0),seconds:0
+    };
+    this.stuckSeconds=0;this.misfireSeconds=0;
+    this.onEvent(ramp.toLayer===1?"RAMP ASCENT · CLIMBING TO UPPER DECK":"RAMP DESCENT · RETURN TO LOWER DECK");
+    return true;
+  }
+  advanceOnRamp() {
+    const motion=this.rampMotion;
+    if(!motion)return;
+    const current=sampleRamp(motion.track,motion.distance);
+    // Project planar +Y gravity and vertical gravity onto the three-dimensional
+    // path tangent. A small speed loss approximates rolling friction.
+    const acceleration=5.1*current.tangent.y-6.4*current.tangent.z-.13*motion.speed;
+    motion.speed=clamp(motion.speed+acceleration*STEP,-14,28);
+    motion.distance+=motion.speed*STEP;
+    motion.seconds+=STEP;
+    if(motion.distance>=motion.track.totalLength) {
+      this.finishRamp(true);
+      return;
+    }
+    if(motion.distance<0||motion.seconds>15) {
+      this.finishRamp(false);
+      return;
+    }
+    motion.point=sampleRamp(motion.track,motion.distance);
+  }
+  finishRamp(completed) {
+    const motion=this.rampMotion;
+    if(!motion)return;
+    const part=motion.track.ramp;
+    const destination=completed?part.toLayer:motion.sourceLayer;
+    const position=sampleRamp(motion.track,completed?motion.track.totalLength:0);
+    const direction=completed?1:-1;
+    const exitSpeed=Math.max(2,Math.abs(motion.speed));
+    this.layer=destination;
+    this.ball=addBall(this.scenes[destination].world,position.x,position.y);
+    this.ball.setLinearVelocity(V(position.tangent.x*exitSpeed*direction,position.tangent.y*exitSpeed*direction));
+    this.rampMotion=null;
+    this.lastRamp=this.elapsed;
+    this.upperTime=0;
+    this.stuckSeconds=0;
+    this.misfireSeconds=0;
+    if(!completed){
+      this.onEvent("RAMP STALLED · BALL ROLLED BACK");
+    }else if(this.layer===1){
+      if(!this.tilted){
+        this.score+=1200;
+        this.advanceQuest("rampRuns");
+        this.onEvent("UPPER DECK REACHED · +1200");
+      }else this.onEvent("UPPER DECK REACHED · TILT ACTIVE");
+    }else this.onEvent("LOWER DECK REACHED");
   }
   watchBall() {
     if(!this.ball)return;
@@ -236,7 +305,10 @@ export class PinballGame {
       this.onEvent("QUEST COMPLETE: "+quest.label.toUpperCase());
     }
   }
+  // Legacy instant transfer is retained only for recovery chutes and
+  // compatibility with existing tests; playable ramp entrances use enterRamp.
   transfer(ramp) {
+    if(!this.ball)return;
     const v=this.ball.getLinearVelocity();
     this.scenes[this.layer].world.destroyBody(this.ball);
     this.layer=ramp.toLayer;
@@ -252,8 +324,8 @@ export class PinballGame {
     } else this.onEvent("RETURN TO LOWER DECK");
   }
   drain() {
-    this.scenes[this.layer].world.destroyBody(this.ball);
-    this.ball=null;
+    if(this.ball)this.scenes[this.layer].world.destroyBody(this.ball);
+    this.ball=null;this.rampMotion=null;
     this.balls--;
     this.tiltMeter=0;this.tilted=false;this.charging=false;this.charge=0;
     this.stuckSeconds=0;this.misfireSeconds=0;this.rescueCount=0;

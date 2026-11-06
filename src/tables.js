@@ -16,11 +16,11 @@ const core = [
   {id:"t3",type:"target",layer:0,x:8.1,y:9.5,r:0.3},
   {id:"w1",type:"wall",layer:0,x1:1.25,y1:11.7,x2:2.45,y2:12.35},
   {id:"w2",type:"wall",layer:0,x1:9.0,y1:11.7,x2:7.8,y2:12.35},
-  {id:"up",type:"ramp",layer:0,toLayer:1,x:2.25,y:7.7,toX:3.15,toY:4.15,r:0.58},
+  {id:"up",type:"ramp",layer:0,toLayer:1,x:2.25,y:7.7,toX:3.15,toY:4.15,r:0.58,curve:0.8},
   {id:"ub1",type:"bumper",layer:1,x:4.4,y:5.2,r:0.43},
   {id:"ub2",type:"bumper",layer:1,x:6.15,y:6.55,r:0.42},
   {id:"ut",type:"target",layer:1,x:5.3,y:3.1,r:0.27},
-  {id:"down",type:"ramp",layer:1,toLayer:0,x:7.2,y:8.95,toX:7.35,toY:11.0,r:0.7}
+  {id:"down",type:"ramp",layer:1,toLayer:0,x:7.2,y:8.95,toX:7.35,toY:11.0,r:0.7,curve:-0.65}
 ];
 const baseQuests = [
   {id:"q-bump",label:"Wake the pop bumpers",kind:"bumperHits",goal:6},

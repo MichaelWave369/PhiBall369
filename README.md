@@ -2,6 +2,10 @@
 
 **Browser-first React pinball physics engine and two-level table workshop.**
 
+### Elevation Rung: curved 2.5D guided ramps
+
+Ramps now have a continuous cubic Bézier X/Y/Z path with grade-sensitive motion, on-ramp ball travel, rollover/rollback, and tangent-aligned reentry into the destination Planck deck. The React workshop includes a curvature slider for creating and shaping ramps, and the physics overlay exposes live elevation. [Technical details and limitations](docs/ELEVATION_RUNG.md).
+
 ### Chrome Edition: physics and visual upgrade
 
 The next rung adds open outlane drains, stalled-ball recovery, Planck polygon slingshots, stronger bumper kicks, original chrome SVG part sprites, and a switchable physics debug overlay. The physics and renderer share [collision geometry](src/geometry.js) so visual rails agree with real solver shapes. For the detailed design, limitations, asset sourcing, and manual test plan, see [Chrome Edition](docs/CHROME_EDITION.md).
