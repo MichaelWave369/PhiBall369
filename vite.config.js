@@ -1,4 +1,5 @@
 import {defineConfig} from "vite";
+import react from "@vitejs/plugin-react";
 
-// Relative assets work on Netlify, locally, or a GitHub Pages repo subpath.
-export default defineConfig({base:"./"});
+// Relative paths work on both GitHub Pages subpaths and Netlify root domains.
+export default defineConfig({plugins:[react()],base:"./"});
